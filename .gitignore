@@ -1,0 +1,13 @@
+# Результаты работы программы
+out/
+*.zip
+
+# Материалы следующего этапа, вне Git
+_legacy/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# macOS
+.DS_Store

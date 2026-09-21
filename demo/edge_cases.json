@@ -1,0 +1,35 @@
+{
+  "_synthetic": true,
+  "_description": "Искусственные данные для показа интерфейса. Ничьей историей не являются.",
+  "weighted_mean": {
+    "values": [
+      60,
+      90
+    ],
+    "days": [
+      10,
+      20
+    ],
+    "expected": 80
+  },
+  "sum_mean": {
+    "totals": [
+      100,
+      200
+    ],
+    "days": [
+      10,
+      20
+    ],
+    "expected_sum": 300,
+    "expected_mean": 10
+  },
+  "zero_baseline": {
+    "earlier": 0,
+    "later": 10,
+    "expected_relative_change": null
+  },
+  "unsafe_text": {
+    "source": "<script>alert(\"demo\")</script>"
+  }
+}

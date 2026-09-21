@@ -1,0 +1,972 @@
+{
+  "_synthetic": true,
+  "_description": "Искусственные данные для показа интерфейса. Ничьей историей не являются.",
+  "definition": "Демонстрация: окна от полудня до полудня, дневной сон входит; не обязательно полные ночи.",
+  "sources": {
+    "S001": "Apple Watch; version demo-A",
+    "S002": "Apple Watch; version demo-B"
+  },
+  "offset_change_intervals": 0,
+  "monthly": [
+    {
+      "month": "2020-01",
+      "mean_hours": 7.2524,
+      "median_hours": 7.352399999999999,
+      "observed_windows": 19,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S001": 19
+      }
+    },
+    {
+      "month": "2020-02",
+      "mean_hours": 7.2728,
+      "median_hours": 7.3728,
+      "observed_windows": 20,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S001": 20
+      }
+    },
+    {
+      "month": "2020-03",
+      "mean_hours": 7.0423,
+      "median_hours": 7.1423,
+      "observed_windows": 21,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S001": 21
+      }
+    },
+    {
+      "month": "2020-04",
+      "mean_hours": 6.773,
+      "median_hours": 6.872999999999999,
+      "observed_windows": 22,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 1,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S001": 22
+      }
+    },
+    {
+      "month": "2020-05",
+      "mean_hours": 6.7123,
+      "median_hours": 6.8123,
+      "observed_windows": 23,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S001": 23
+      }
+    },
+    {
+      "month": "2020-06",
+      "mean_hours": 6.9162,
+      "median_hours": 7.0161999999999995,
+      "observed_windows": 24,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S001": 24
+      }
+    },
+    {
+      "month": "2020-07",
+      "mean_hours": 7.1971,
+      "median_hours": 7.2970999999999995,
+      "observed_windows": 25,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S001": 25
+      }
+    },
+    {
+      "month": "2020-08",
+      "mean_hours": 7.2968,
+      "median_hours": 7.3968,
+      "observed_windows": 26,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S001": 26
+      }
+    },
+    {
+      "month": "2020-09",
+      "mean_hours": 7.1236,
+      "median_hours": 7.223599999999999,
+      "observed_windows": 27,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S001": 27
+      }
+    },
+    {
+      "month": "2020-10",
+      "mean_hours": 6.8368,
+      "median_hours": 6.9368,
+      "observed_windows": 18,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S001": 18
+      }
+    },
+    {
+      "month": "2020-11",
+      "mean_hours": 6.7,
+      "median_hours": 6.8,
+      "observed_windows": 19,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S001": 19
+      }
+    },
+    {
+      "month": "2020-12",
+      "mean_hours": 6.839,
+      "median_hours": 6.939,
+      "observed_windows": 20,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S001": 20
+      }
+    },
+    {
+      "month": "2021-01",
+      "mean_hours": 7.2524,
+      "median_hours": 7.352399999999999,
+      "observed_windows": 19,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S001": 19
+      }
+    },
+    {
+      "month": "2021-02",
+      "mean_hours": 7.2728,
+      "median_hours": 7.3728,
+      "observed_windows": 20,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S001": 20
+      }
+    },
+    {
+      "month": "2021-03",
+      "mean_hours": 7.0423,
+      "median_hours": 7.1423,
+      "observed_windows": 21,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S001": 21
+      }
+    },
+    {
+      "month": "2021-04",
+      "mean_hours": 6.773,
+      "median_hours": 6.872999999999999,
+      "observed_windows": 22,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 1,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S001": 22
+      }
+    },
+    {
+      "month": "2021-05",
+      "mean_hours": 6.7123,
+      "median_hours": 6.8123,
+      "observed_windows": 23,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S001": 23
+      }
+    },
+    {
+      "month": "2021-06",
+      "mean_hours": 6.9162,
+      "median_hours": 7.0161999999999995,
+      "observed_windows": 24,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S001": 24
+      }
+    },
+    {
+      "month": "2021-07",
+      "mean_hours": 7.1971,
+      "median_hours": 7.2970999999999995,
+      "observed_windows": 25,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S001": 25
+      }
+    },
+    {
+      "month": "2021-08",
+      "mean_hours": 7.2968,
+      "median_hours": 7.3968,
+      "observed_windows": 26,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S001": 26
+      }
+    },
+    {
+      "month": "2021-09",
+      "mean_hours": 7.1236,
+      "median_hours": 7.223599999999999,
+      "observed_windows": 27,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S001": 27
+      }
+    },
+    {
+      "month": "2021-10",
+      "mean_hours": 6.8368,
+      "median_hours": 6.9368,
+      "observed_windows": 18,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S001": 18
+      }
+    },
+    {
+      "month": "2021-11",
+      "mean_hours": 6.7,
+      "median_hours": 6.8,
+      "observed_windows": 19,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S001": 19
+      }
+    },
+    {
+      "month": "2021-12",
+      "mean_hours": 6.839,
+      "median_hours": 6.939,
+      "observed_windows": 20,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S001": 20
+      }
+    },
+    {
+      "month": "2022-01",
+      "mean_hours": 7.2524,
+      "median_hours": 7.352399999999999,
+      "observed_windows": 19,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 19
+      }
+    },
+    {
+      "month": "2022-02",
+      "mean_hours": 7.2728,
+      "median_hours": 7.3728,
+      "observed_windows": 20,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 20
+      }
+    },
+    {
+      "month": "2022-03",
+      "mean_hours": 7.0423,
+      "median_hours": 7.1423,
+      "observed_windows": 21,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 21
+      }
+    },
+    {
+      "month": "2022-04",
+      "mean_hours": 6.773,
+      "median_hours": 6.872999999999999,
+      "observed_windows": 22,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 1,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 22
+      }
+    },
+    {
+      "month": "2022-05",
+      "mean_hours": 6.7123,
+      "median_hours": 6.8123,
+      "observed_windows": 23,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 23
+      }
+    },
+    {
+      "month": "2022-06",
+      "mean_hours": 6.9162,
+      "median_hours": 7.0161999999999995,
+      "observed_windows": 24,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 24
+      }
+    },
+    {
+      "month": "2022-07",
+      "mean_hours": 7.1971,
+      "median_hours": 7.2970999999999995,
+      "observed_windows": 25,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 25
+      }
+    },
+    {
+      "month": "2022-08",
+      "mean_hours": 7.2968,
+      "median_hours": 7.3968,
+      "observed_windows": 26,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 26
+      }
+    },
+    {
+      "month": "2022-09",
+      "mean_hours": 7.1236,
+      "median_hours": 7.223599999999999,
+      "observed_windows": 27,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 27
+      }
+    },
+    {
+      "month": "2022-10",
+      "mean_hours": 6.8368,
+      "median_hours": 6.9368,
+      "observed_windows": 18,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 18
+      }
+    },
+    {
+      "month": "2022-11",
+      "mean_hours": 6.7,
+      "median_hours": 6.8,
+      "observed_windows": 19,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 19
+      }
+    },
+    {
+      "month": "2022-12",
+      "mean_hours": 6.839,
+      "median_hours": 6.939,
+      "observed_windows": 20,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 20
+      }
+    },
+    {
+      "month": "2023-01",
+      "mean_hours": 7.2524,
+      "median_hours": 7.352399999999999,
+      "observed_windows": 19,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 19
+      }
+    },
+    {
+      "month": "2023-02",
+      "mean_hours": 7.2728,
+      "median_hours": 7.3728,
+      "observed_windows": 20,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 20
+      }
+    },
+    {
+      "month": "2023-03",
+      "mean_hours": 7.0423,
+      "median_hours": 7.1423,
+      "observed_windows": 21,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 21
+      }
+    },
+    {
+      "month": "2023-04",
+      "mean_hours": 6.773,
+      "median_hours": 6.872999999999999,
+      "observed_windows": 22,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 1,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 22
+      }
+    },
+    {
+      "month": "2023-05",
+      "mean_hours": 6.7123,
+      "median_hours": 6.8123,
+      "observed_windows": 23,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 23
+      }
+    },
+    {
+      "month": "2023-06",
+      "mean_hours": 6.9162,
+      "median_hours": 7.0161999999999995,
+      "observed_windows": 24,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 24
+      }
+    },
+    {
+      "month": "2023-07",
+      "mean_hours": 7.1971,
+      "median_hours": 7.2970999999999995,
+      "observed_windows": 25,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 25
+      }
+    },
+    {
+      "month": "2023-08",
+      "mean_hours": 7.2968,
+      "median_hours": 7.3968,
+      "observed_windows": 26,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 26
+      }
+    },
+    {
+      "month": "2023-09",
+      "mean_hours": 7.1236,
+      "median_hours": 7.223599999999999,
+      "observed_windows": 27,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 27
+      }
+    },
+    {
+      "month": "2023-10",
+      "mean_hours": 6.8368,
+      "median_hours": 6.9368,
+      "observed_windows": 18,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 18
+      }
+    },
+    {
+      "month": "2023-11",
+      "mean_hours": 6.7,
+      "median_hours": 6.8,
+      "observed_windows": 19,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 19
+      }
+    },
+    {
+      "month": "2023-12",
+      "mean_hours": 6.839,
+      "median_hours": 6.939,
+      "observed_windows": 20,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 20
+      }
+    },
+    {
+      "month": "2024-01",
+      "mean_hours": 7.2524,
+      "median_hours": 7.352399999999999,
+      "observed_windows": 19,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 19
+      }
+    },
+    {
+      "month": "2024-02",
+      "mean_hours": 7.2728,
+      "median_hours": 7.3728,
+      "observed_windows": 20,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 20
+      }
+    },
+    {
+      "month": "2024-03",
+      "mean_hours": 7.0423,
+      "median_hours": 7.1423,
+      "observed_windows": 21,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 21
+      }
+    },
+    {
+      "month": "2024-04",
+      "mean_hours": 6.773,
+      "median_hours": 6.872999999999999,
+      "observed_windows": 22,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 1,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 22
+      }
+    },
+    {
+      "month": "2024-05",
+      "mean_hours": 6.7123,
+      "median_hours": 6.8123,
+      "observed_windows": 23,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 23
+      }
+    },
+    {
+      "month": "2024-06",
+      "mean_hours": 6.9162,
+      "median_hours": 7.0161999999999995,
+      "observed_windows": 24,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 24
+      }
+    },
+    {
+      "month": "2024-07",
+      "mean_hours": 7.1971,
+      "median_hours": 7.2970999999999995,
+      "observed_windows": 25,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 25
+      }
+    },
+    {
+      "month": "2024-08",
+      "mean_hours": 7.2968,
+      "median_hours": 7.3968,
+      "observed_windows": 26,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 26
+      }
+    },
+    {
+      "month": "2024-09",
+      "mean_hours": 7.1236,
+      "median_hours": 7.223599999999999,
+      "observed_windows": 27,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 27
+      }
+    },
+    {
+      "month": "2024-10",
+      "mean_hours": 6.8368,
+      "median_hours": 6.9368,
+      "observed_windows": 18,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 18
+      }
+    },
+    {
+      "month": "2024-11",
+      "mean_hours": 6.7,
+      "median_hours": 6.8,
+      "observed_windows": 19,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 19
+      }
+    },
+    {
+      "month": "2024-12",
+      "mean_hours": 6.839,
+      "median_hours": 6.939,
+      "observed_windows": 20,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 20
+      }
+    },
+    {
+      "month": "2025-01",
+      "mean_hours": 7.2524,
+      "median_hours": 7.352399999999999,
+      "observed_windows": 19,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 19
+      }
+    },
+    {
+      "month": "2025-02",
+      "mean_hours": 7.2728,
+      "median_hours": 7.3728,
+      "observed_windows": 20,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 20
+      }
+    },
+    {
+      "month": "2025-03",
+      "mean_hours": 7.0423,
+      "median_hours": 7.1423,
+      "observed_windows": 21,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 21
+      }
+    },
+    {
+      "month": "2025-04",
+      "mean_hours": 6.773,
+      "median_hours": 6.872999999999999,
+      "observed_windows": 22,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 1,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 22
+      }
+    },
+    {
+      "month": "2025-05",
+      "mean_hours": 6.7123,
+      "median_hours": 6.8123,
+      "observed_windows": 23,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 23
+      }
+    },
+    {
+      "month": "2025-06",
+      "mean_hours": 6.9162,
+      "median_hours": 7.0161999999999995,
+      "observed_windows": 24,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 24
+      }
+    },
+    {
+      "month": "2025-07",
+      "mean_hours": 7.1971,
+      "median_hours": 7.2970999999999995,
+      "observed_windows": 25,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 25
+      }
+    },
+    {
+      "month": "2025-08",
+      "mean_hours": 7.2968,
+      "median_hours": 7.3968,
+      "observed_windows": 26,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 26
+      }
+    },
+    {
+      "month": "2025-09",
+      "mean_hours": 7.1236,
+      "median_hours": 7.223599999999999,
+      "observed_windows": 27,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 27
+      }
+    },
+    {
+      "month": "2025-10",
+      "mean_hours": 6.8368,
+      "median_hours": 6.9368,
+      "observed_windows": 18,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 18
+      }
+    },
+    {
+      "month": "2025-11",
+      "mean_hours": 6.7,
+      "median_hours": 6.8,
+      "observed_windows": 19,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 19
+      }
+    },
+    {
+      "month": "2025-12",
+      "mean_hours": 6.839,
+      "median_hours": 6.939,
+      "observed_windows": 20,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 20
+      }
+    },
+    {
+      "month": "2026-01",
+      "mean_hours": 7.2524,
+      "median_hours": 7.352399999999999,
+      "observed_windows": 19,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 19
+      }
+    },
+    {
+      "month": "2026-02",
+      "mean_hours": 7.2728,
+      "median_hours": 7.3728,
+      "observed_windows": 20,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 20
+      }
+    },
+    {
+      "month": "2026-03",
+      "mean_hours": 7.0423,
+      "median_hours": 7.1423,
+      "observed_windows": 21,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 21
+      }
+    },
+    {
+      "month": "2026-04",
+      "mean_hours": 6.773,
+      "median_hours": 6.872999999999999,
+      "observed_windows": 22,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 1,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 22
+      }
+    },
+    {
+      "month": "2026-05",
+      "mean_hours": 6.7123,
+      "median_hours": 6.8123,
+      "observed_windows": 23,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 23
+      }
+    },
+    {
+      "month": "2026-06",
+      "mean_hours": 6.9162,
+      "median_hours": 7.0161999999999995,
+      "observed_windows": 24,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 0,
+      "selected_sources": {
+        "S002": 24
+      }
+    },
+    {
+      "month": "2026-07",
+      "mean_hours": 7.1971,
+      "median_hours": 7.2970999999999995,
+      "observed_windows": 25,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 1,
+      "selected_sources": {
+        "S002": 25
+      }
+    },
+    {
+      "month": "2026-08",
+      "mean_hours": 7.2968,
+      "median_hours": 7.3968,
+      "observed_windows": 12,
+      "multi_source_windows": 0,
+      "conflicting_awake_windows": 0,
+      "shorter_than_3h_windows": 2,
+      "selected_sources": {
+        "S002": 12
+      }
+    }
+  ]
+}
