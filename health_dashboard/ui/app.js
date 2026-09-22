@@ -27,12 +27,13 @@ function notify(text,kind='ok'){
  item.className='toast toast-'+kind; item.dataset.role='toast'; item.dataset.scope=scope;
  item.dataset.kind=kind; item.dataset.text=String(text);
  if(kind==='error')item.setAttribute('role','alert');
+ let dot=document.createElement('i'); dot.className='toast-dot'; dot.setAttribute('aria-hidden','true');
  let body=document.createElement('p'); body.className='toast-text'; body.textContent=text;
  let close=document.createElement('button');
  close.type='button'; close.className='toast-close'; close.dataset.role='toast-close';
  close.setAttribute('aria-label','Закрыть сообщение'); close.textContent='\u00d7';
  close.onclick=()=>item.remove();
- item.append(body,close); box.append(item);
+ item.append(dot,body,close); box.append(item);
  while(box.children.length>3)box.firstElementChild.remove();
  restartLife(item);
  return item;
