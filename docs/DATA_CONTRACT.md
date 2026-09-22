@@ -65,6 +65,7 @@ escaping.
 | resting_hr | bpm | mean_observed_days |
 | vo2max | mL/kg/min | mean_observed_days |
 | sleep_hours | hours of sleep per calendar day with a record | mean_observed_days |
+| sleep_core_hours, sleep_deep_hours, sleep_rem_hours, sleep_unspecified_hours (optional) | hours of that sleep stage per calendar day with a record of it; a record without a stage counts as unspecified; the union of a stage's intervals is taken on its own, so stages need not add up to sleep_hours across days | mean_observed_days |
 | workout_Running / Walking / Cycling / Swimming and any other workout_* | minutes of recorded workouts | sum |
 | workout_*_count | number of workouts started | sum |
 

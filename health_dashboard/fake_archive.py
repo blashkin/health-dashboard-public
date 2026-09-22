@@ -70,8 +70,13 @@ def records():
     nxt=day+dt.timedelta(days=1); hours=rnd.around(6.9+.3*math.sin(day.month),.12)
     out.append(record('HKCategoryTypeIdentifierSleepAnalysis',watch,stamp(day,23,30),stamp(nxt,7,10),'HKCategoryValueSleepAnalysisInBed'))
     half=int(hours*30)
-    out.append(record('HKCategoryTypeIdentifierSleepAnalysis',watch,stamp(day,23,40),shift(day,23,40,half),'HKCategoryValueSleepAnalysisAsleepCore'))
-    out.append(record('HKCategoryTypeIdentifierSleepAnalysis',watch,shift(day,23,40,half+12),shift(day,23,40,2*half+12),'HKCategoryValueSleepAnalysisAsleepDeep'))
+    if day.year<2022:                                    # старые часы: только «спал», без стадий
+     out.append(record('HKCategoryTypeIdentifierSleepAnalysis',watch,stamp(day,23,40),shift(day,23,40,2*half+12),'HKCategoryValueSleepAnalysisAsleep'))
+    else:                                                # новые часы размечают стадии, как watchOS 9
+     rem=int(half*.3)
+     out.append(record('HKCategoryTypeIdentifierSleepAnalysis',watch,stamp(day,23,40),shift(day,23,40,half),'HKCategoryValueSleepAnalysisAsleepCore'))
+     out.append(record('HKCategoryTypeIdentifierSleepAnalysis',watch,shift(day,23,40,half+12),shift(day,23,40,2*half+12-rem),'HKCategoryValueSleepAnalysisAsleepDeep'))
+     out.append(record('HKCategoryTypeIdentifierSleepAnalysis',watch,shift(day,23,40,2*half+12-rem),shift(day,23,40,2*half+12),'HKCategoryValueSleepAnalysisAsleepREM'))
     if wd==2: out.append(record('HKCategoryTypeIdentifierSleepAnalysis',watch,shift(day,23,40,half),shift(day,23,40,half+12),'HKCategoryValueSleepAnalysisAwake'))
    if day.day==15: out.append(out[-1])                  # точный повтор: дедупликация должна сработать
   day+=dt.timedelta(days=1)

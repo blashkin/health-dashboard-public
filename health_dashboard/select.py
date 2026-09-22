@@ -2,8 +2,9 @@
 import calendar, csv, json, statistics as st
 from collections import Counter, defaultdict
 
-CORE={'steps','exercise_min','walk_run_km','cycling_km','swimming_km','resting_hr','vo2max','sleep_hours'}
-MEANS={'resting_hr','vo2max','sleep_hours'}
+STAGES={'sleep_core_hours','sleep_deep_hours','sleep_rem_hours','sleep_unspecified_hours'}
+CORE={'steps','exercise_min','walk_run_km','cycling_km','swimming_km','resting_hr','vo2max','sleep_hours'}|STAGES
+MEANS={'resting_hr','vo2max','sleep_hours'}|STAGES
 METHOD=('Предварительный выбор источника по дням: сначала категория Apple Watch, затем больше дней '
         'наблюдений внутри показателя и месяца, затем отпечаток ключа источника. Один источник на день, источники '
         'никогда не складываются. Даты берутся у источника рангом ниже только там, где старший источник '

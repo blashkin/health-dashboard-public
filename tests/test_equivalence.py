@@ -39,7 +39,14 @@ class Both:
   by_hash={v['key_hash']:k for k,v in json.loads((self.new/'sources.json').read_text(encoding='utf-8')).items()}
   self.map={nid:by_hash[source_key_hash(key)] for key,nid in ref_ids.items()}
  def pair(self,name):
-  return (self.ref/name).read_bytes(),(self.new/name).read_bytes()
+  return (self.ref/name).read_bytes(),without_stages((self.new/name).read_bytes())
+
+# Разрешённое расхождение: единый проход пишет ещё и стадии сна (sleep_core/deep/rem/unspecified),
+# которых у прежнего двухпроходного эталона не было. Строки стадий вырезаются перед сравнением;
+# всё остальное обязано совпасть побайтно.
+STAGE_ROWS=(b'sleep_core_hours,',b'sleep_deep_hours,',b'sleep_rem_hours,',b'sleep_unspecified_hours,')
+def without_stages(data):
+ return b''.join(line for line in data.splitlines(keepends=True) if not line.startswith(STAGE_ROWS))
 
 def remap(node,mapping):
  if isinstance(node,dict): return {mapping.get(k,k):remap(v,mapping) for k,v in node.items()}

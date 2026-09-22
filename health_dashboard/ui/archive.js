@@ -103,6 +103,9 @@ function normalize(value,unit,target){
  return v*f;
 }
 const sleepMetric=v=>ASLEEP.has(v)?'sleep_hours':INBED.has(v)?'sleep_inbed_hours':AWAKE.has(v)?'sleep_awake_hours':null;
+// Стадия внутри сна, как в parse.sleep_stage: запись без стадии идёт в «без стадии».
+const STAGES={'HKCategoryValueSleepAnalysisAsleepCore':'sleep_core_hours','3':'sleep_core_hours','HKCategoryValueSleepAnalysisAsleepDeep':'sleep_deep_hours','4':'sleep_deep_hours','HKCategoryValueSleepAnalysisAsleepREM':'sleep_rem_hours','5':'sleep_rem_hours'};
+const sleepStage=v=>ASLEEP.has(v)?(STAGES[v]||'sleep_unspecified_hours'):null;
 
 const DEVICE_ADDRESS=/^(\s*<+HKDevice:\s*)0x[0-9a-fA-F]+(?=\s*[,;>])/;
 const normalizedDevice=text=>String(text||'').replace(DEVICE_ADDRESS,'$1[representation-address]');
@@ -427,8 +430,9 @@ const SLEEP_DEFINITION='Объединение интервалов сна вн�
  'Порога «нормы сна» и диагноза здесь нет. Один источник на окно, тот же предварительный '+
  'ранг источников, что и в основном отчёте.';
 
-const CORE=new Set(['steps','exercise_min','walk_run_km','cycling_km','swimming_km','resting_hr','vo2max','sleep_hours']);
-const MEANS=new Set(['resting_hr','vo2max','sleep_hours']);
+const STAGE_METRICS=['sleep_core_hours','sleep_deep_hours','sleep_rem_hours','sleep_unspecified_hours'];
+const CORE=new Set(['steps','exercise_min','walk_run_km','cycling_km','swimming_km','resting_hr','vo2max','sleep_hours',...STAGE_METRICS]);
+const MEANS=new Set(['resting_hr','vo2max','sleep_hours',...STAGE_METRICS]);
 const relevant=m=>CORE.has(m)||m.startsWith('workout_');
 // round(x,4) в Python округляет по точному значению double, ровную половину — к чётному.
 // toFixed берёт то же точное значение, но половину уводит вверх: 60.03125 -> 60.0313 против 60.0312.
@@ -508,10 +512,11 @@ async function collect(blob,entry,opts){
     .map(v=>v===undefined?'':String(v)).join('');
    if(!seen.add(key)){counters.duplicates_removed++;return}
    if(a.off!==b.off)counters.timezone_offset_changes_within_record++;
-   let value=0;
+   let value=0,stage=null;
    if(kind==='sleep'){
     metric=sleepMetric(val);
     if(metric===null)fail('record','unknown sleep category');
+    stage=sleepStage(val);
     // Оконные строки требуют строго b>a: иначе pieces отдаёт кусок нулевой длины.
     if(windowed&&b.t>a.t)
      pieces(a.t-43200,b.t-43200,a.off,(day,s,e)=>
@@ -524,6 +529,8 @@ async function collect(blob,entry,opts){
    }
    if(kind==='mean')chunk(metric,sid,dayString(Math.floor((a.t+a.off)/86400)),a.t,b.t,value,kind);
    else pieces(a.t,b.t,a.off,(day,s,e,fraction)=>chunk(metric,sid,day,s,e,value*fraction,kind));
+   // Та же запись под именем стадии: объединение за день считается для стадии отдельно.
+   if(stage)pieces(a.t,b.t,a.off,(day,s,e)=>chunk(stage,sid,day,s,e,0,kind));
   }catch(err){
    if(err instanceof ArchiveError&&err.code==='record')counters.invalid_or_unsupported++;
    else throw err;

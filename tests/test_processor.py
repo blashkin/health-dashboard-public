@@ -24,6 +24,9 @@ class ProcessorTests(unittest.TestCase):
    self.assertEqual(val('vo2max'),45)
    self.assertEqual(val('resting_hr'),80)
    self.assertEqual(val('sleep_hours'),2)
+   # Стадии считаются тем же объединением интервалов, по своим дням: Core 23:00–02:00 даёт 1 ч и 2 ч
+   # (среднее 1,5), Deep 01:00–03:00 лежит в одном дне (2 ч). Их средние не складываются в сон.
+   self.assertEqual(val('sleep_core_hours'),1.5); self.assertEqual(val('sleep_deep_hours'),2)
    self.assertEqual(val('workout_Running'),45)
    self.assertEqual(val('workout_Running_count'),1)
    self.assertFalse((path/'result/aggregate_work.sqlite').exists())

@@ -1,7 +1,7 @@
 """Один проход по архиву: разбор записей, дедупликация, части дней. Личные значения не печатаются."""
 import hashlib, json, os, sqlite3
 from . import aggregate, inventory, sleep
-from .parse import ASLEEP, METRICS, iter_records, normalize, pieces, sleep_metric, source_category, source_key, source_key_hash, stamp
+from .parse import ASLEEP, METRICS, iter_records, normalize, pieces, sleep_metric, sleep_stage, source_category, source_key, source_key_hash, stamp
 
 SCHEMA='''CREATE TABLE chunks(metric TEXT,source TEXT,day TEXT,a REAL,b REAL,value REAL,kind TEXT);
 CREATE TABLE seen(hash TEXT PRIMARY KEY);
@@ -62,10 +62,11 @@ def run(archive,out,inventory_report=True):
      counters['duplicates_removed']+=1
     else:
      if a.utcoffset()!=b.utcoffset(): counters['timezone_offset_changes_within_record']+=1
+     stage=None
      if kind=='sleep':
       metric=sleep_metric(val)
       if metric is None: raise ValueError('unknown sleep category')
-      value=0
+      value=0; stage=sleep_stage(val)
       # Оконные строки требуют строго b>a: иначе pieces отдаёт кусок нулевой длины.
       if windowed and b>a:
        for day,start,end in sleep.window_pieces(a,b):
@@ -78,6 +79,11 @@ def run(archive,out,inventory_report=True):
      else:
       for day,start,end,fraction in pieces(a,b):
        db.execute('INSERT INTO chunks VALUES (?,?,?,?,?,?,?)',(metric,sid,day,start,end,value*fraction,kind))
+      # Та же запись сна ещё раз, под именем своей стадии: объединение интервалов за день
+      # считается для стадии отдельно, тем же правилом, что и для сна целиком.
+      if stage:
+       for day,start,end,fraction in pieces(a,b):
+        db.execute('INSERT INTO chunks VALUES (?,?,?,?,?,?,?)',(stage,sid,day,start,end,0,kind))
   except (ValueError,KeyError,OverflowError): counters['invalid_or_unsupported']+=1
   pending+=1
   if pending>=10000: db.commit(); pending=0

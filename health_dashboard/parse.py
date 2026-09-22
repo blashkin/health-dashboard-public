@@ -21,6 +21,12 @@ METRICS = {
 ASLEEP=frozenset({'HKCategoryValueSleepAnalysisAsleep','HKCategoryValueSleepAnalysisAsleepUnspecified','HKCategoryValueSleepAnalysisAsleepCore','HKCategoryValueSleepAnalysisAsleepDeep','HKCategoryValueSleepAnalysisAsleepREM','1','3','4','5'})
 INBED=frozenset({'HKCategoryValueSleepAnalysisInBed','0'})
 AWAKE=frozenset({'HKCategoryValueSleepAnalysisAwake','2'})
+# Стадия внутри сна: как часы разметили это время. Запись без стадии (старые watchOS,
+# сторонние приложения) идёт в «без стадии», чтобы сумма стадий сходилась с длительностью сна.
+STAGES={'HKCategoryValueSleepAnalysisAsleepCore':'sleep_core_hours','3':'sleep_core_hours',
+        'HKCategoryValueSleepAnalysisAsleepDeep':'sleep_deep_hours','4':'sleep_deep_hours',
+        'HKCategoryValueSleepAnalysisAsleepREM':'sleep_rem_hours','5':'sleep_rem_hours'}
+STAGE_METRICS=('sleep_core_hours','sleep_deep_hours','sleep_rem_hours','sleep_unspecified_hours')
 
 def normalized_device(text):
  # Убирается только служебный адрес объекта, но не поля идентичности устройства.
@@ -70,6 +76,10 @@ def normalize(value,unit,target):
 def sleep_metric(value):
  """Показатель для значения категории сна; None, если значение незнакомо."""
  return 'sleep_hours' if value in ASLEEP else 'sleep_inbed_hours' if value in INBED else 'sleep_awake_hours' if value in AWAKE else None
+
+def sleep_stage(value):
+ """Показатель стадии для значения «спал»; None для всего, что не сон."""
+ return None if value not in ASLEEP else STAGES.get(value,'sleep_unspecified_hours')
 
 def find_health_xml(z):
  """Единственный XML выгрузки внутри архива. Имя файла локализовано, ищем по корневому тегу."""

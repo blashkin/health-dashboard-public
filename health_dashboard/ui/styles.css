@@ -155,3 +155,6 @@ button.big{min-height:var(--control-lg);padding:0 var(--s-6);font-size:1.05rem}
 .foot{margin-top:var(--s-6);padding:var(--s-4) 0 var(--s-2);border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:var(--s-2) var(--s-4);font-size:.82rem;color:var(--faint)}.foot a{color:var(--second)}
 
 .theme{width:var(--control);padding:0;display:inline-flex;align-items:center;justify-content:center}.theme svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+.stack{width:100%;height:auto;display:block}.stack text{font-size:12px;fill:var(--muted)}.stack .axis{stroke:var(--line)}
+.stack rect.deep,.sw.stage-deep{fill:var(--cat-2);background:var(--cat-2)}.stack rect.core,.sw.stage-core{fill:var(--cat-1);background:var(--cat-1)}.stack rect.rem,.sw.stage-rem{fill:var(--cat-4);background:var(--cat-4)}.stack rect.unspec,.sw.stage-unspec{fill:var(--empty);background:var(--empty)}

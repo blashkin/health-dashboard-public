@@ -551,6 +551,28 @@ let browser = null;
   });
   check('the workouts tab carries a sport-by-year table', sportYears.box && sportYears.years > 1 && sportYears.cellsInDom);
   check('the yearly average duration is sum of minutes over sum of starts on matching months', sportYears.avgOk === true);
+
+  // Стадии сна на вкладке «Сон»: доли за месяц суммируются в 100%, годовая строка есть,
+  // на «Главном» блока нет. Синтетика пишет стадии только с 2022 года: раньше — «без стадии».
+  await page.click('[data-tab="sleep"]');
+  const stages = await page.evaluate(() => {
+    const d = HealthUI.sleepStages(), box = HealthUI.control('app').querySelector('[data-role="sleep-stages"]');
+    if (!d || !box) return { box: !!box, d: !!d };
+    const sums = d.months.map(m => m.shares.reduce((s, v) => s + v, 0));
+    const early = d.months.filter(m => m.month < '2022-01'), late = d.months.filter(m => m.month >= '2022-01');
+    return { box: true, d: true, sumsOk: sums.every(s => Math.abs(s - 1) < 1e-9),
+      earlyUnspecified: early.length > 0 && early.every(m => m.shares[3] > .99),
+      lateStaged: late.length > 0 && late.every(m => m.shares[3] < .01 && m.shares[0] > 0 && m.shares[2] > 0),
+      yearRows: box.querySelectorAll('table.stage-years tbody tr').length === d.years.length && d.years.length > 1,
+      bars: box.querySelectorAll('svg rect').length > d.months.length };
+  });
+  check('the sleep tab carries a stages-by-month block', stages.box && stages.d);
+  check('stage shares of a month add up to one', stages.sumsOk === true);
+  check('months before the staging watch are all «без стадии», months after have deep and REM', stages.earlyUnspecified === true && stages.lateStaged === true);
+  check('the stages block has a row per year and bars per month', stages.yearRows === true && stages.bars === true);
+  await page.click('[data-tab="story"]');
+  check('the story tab has no stages block', await page.evaluate(() => !HealthUI.control('app').querySelector('[data-role="sleep-stages"]')));
+  await page.click('[data-tab="workouts"]');
   check('sport columns run from the most hours to the least', sportYears.sorted === true);
   check('a year with a gap in the records says so in the table', /записи есть в 10 месяцах/.test(sportYears.text));
   // Занятия называются словом и склоняются по числу перед ними, без «зан.».
