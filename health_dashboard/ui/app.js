@@ -235,14 +235,15 @@ function archiveStep(fraction){let percent=Math.round(fraction*100);if(percent==
 // Дочитали раньше — лента всё равно долистывает до конца, и только потом открывается дашборд.
 const READ_MIN_MS=3000;
 function finishYears(startedAt,signal){
- return new Promise(resolve=>{
+ return new Promise((resolve,reject)=>{
   let from=archiveShown<0?0:archiveShown/100,
       left=Math.max(0,READ_MIN_MS-(Date.now()-startedAt));
   if(left<=0&&from>=1){archiveStep(1);resolve();return}
   let t0=Date.now(),span=Math.max(left,240),
       tick=()=>{
-       // Отмена во время долистывания просто обрывает ленту: архив уже прочитан.
-       if(signal&&signal.aborted){resolve();return}
+       // Отмена во время долистывания — тоже отмена: кнопка обещает вернуть на старт, и прочитанное
+       // отбрасывается, даже если разбор уже закончился.
+       if(signal&&signal.aborted){reject(new HealthArchive.ArchiveError('cancelled','cancelled'));return}
        let k=Math.min(1,(Date.now()-t0)/span);
        archiveStep(from+(1-from)*k);
        if(k<1)requestAnimationFrame(tick);else resolve()};

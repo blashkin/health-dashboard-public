@@ -987,6 +987,16 @@ let browser = null;
   check('after reading, the dashboard opens on the plain-language section', ready.tab === 'story' && ready.start && ready.loading && (await visible('nav')));
   check('what was typed on the start screen is what the norms are matched on',
     /1988/.test(ready.who) && /мужской/.test(ready.who) && !ready.intro);
+  // Cancelling while the ribbon is still running, after the parse itself has finished, is still a cancel.
+  await empty.click('[data-ui="reset"]');
+  await empty.evaluate(() => HealthUI.dropToasts(true));
+  await empty.setInputFiles('[data-ui="archiveFile"]', archiveOf(healthXml()));
+  await empty.waitForFunction(() => !HealthUI.control('loading').className.includes('hidden'), null, { timeout: 10000 });
+  await empty.waitForTimeout(1200);
+  await empty.click('[data-ui="archiveCancel"]');
+  await settledEmpty();
+  check('cancelling during the ribbon discards what was read',
+    await empty.evaluate(() => /Чтение отменено/.test(HealthUI.control('alert').textContent) && !HealthUI.control('start').className.includes('hidden')));
   await feedEmpty({ name: 'fake_archive.zip', mimeType: 'application/zip', buffer: fs.readFileSync(FAKE) });
   check('the fake archive is marked as demo data on the empty page too',
     await empty.evaluate(() => HealthUI.state().isDemo === true && /Демонстрационные данные/.test(HealthUI.control('periodTitle').textContent)));
