@@ -96,8 +96,7 @@ the main file carries it.
 
 The two files are independent and are not required to share identifiers. **The two
 sleep definitions are never added together.** Importing a new main file replaces the
-previous set and clears the sleep file and the reconciliation notes, so that two sets
-cannot be mixed; the sleep file is then imported as a separate action. A mismatched
+previous set and clears the sleep file, so that two sets cannot be mixed; the sleep file is then imported as a separate action. A mismatched
 date range is worth a warning, but is not in itself an error.
 
 ## Demo and check fixtures
