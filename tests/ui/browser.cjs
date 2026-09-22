@@ -1038,6 +1038,34 @@ let browser = null;
         && getComputedStyle(b).backgroundColor === 'rgb(200, 68, 45)';
     }));
 
+  // ——— Язык страницы: кнопка рядом с темой, атрибут lang, ничего на диск. ———
+  const lang = await page.evaluate(() => {
+    const b = HealthUI.control('lang'), before = { code: HealthUI.currentLang(), label: b.textContent.trim(), attr: document.documentElement.lang };
+    HealthUI.setLang('en');
+    const en = { label: HealthUI.control('lang').textContent.trim(), attr: document.documentElement.lang, code: HealthUI.currentLang() };
+    HealthUI.setLang('ru');
+    const back = { label: HealthUI.control('lang').textContent.trim(), attr: document.documentElement.lang, code: HealthUI.currentLang() };
+    const stored = (() => { try { return localStorage.length } catch (e) { return 0 } })();
+    return { before, en, back, stored, aria: HealthUI.control('lang').getAttribute('aria-label') };
+  });
+  check('the header carries a language button beside the theme toggle', lang.before.label === 'EN');
+  check('switching to English changes the lang attribute and the button caption',
+    lang.en.code === 'en' && lang.en.attr === 'en' && lang.en.label === 'RU');
+  check('switching back restores Russian', lang.back.code === 'ru' && lang.back.attr === 'ru' && lang.back.label === 'EN');
+  check('the language button names itself in words', /\S/.test(lang.aria || ''));
+  check('the language choice is not written to disk', lang.stored === 0);
+  // Каждый видимый русский текст обязан приходить через t(): обход вкладок не должен
+  // оставить ни одного промаха ключа. Для en проверка включается на этапе D.
+  const missing = await page.evaluate(() => {
+    HealthUI.setState({ missing: [] });
+    for (const b of document.querySelectorAll('[data-tab]')) { HealthUI.setState({ tab: b.dataset.tab }); HealthUI.render(); }
+    const left = (HealthUI.state().missing || []).slice();
+    HealthUI.setState({ tab: 'story' }); HealthUI.render();
+    return left;
+  });
+  check('no interface key is missing in Russian', missing.length === 0);
+  if (missing.length) console.log(missing);
+
   check('no network requests other than file:', [...schemes].every(s => s === 'file'));
   check('no page errors', errors.length === 0);
   if (errors.length) console.log(errors);
@@ -1123,6 +1151,8 @@ let browser = null;
   await feedEmpty({ name: 'fake_archive.zip', mimeType: 'application/zip', buffer: fs.readFileSync(FAKE) });
   check('the fake archive is marked as demo data on the empty page too',
     await empty.evaluate(() => HealthUI.state().isDemo === true && /Демонстрационные данные/.test(HealthUI.control('periodTitle').textContent)));
+  check('the empty page carries the language button too',
+    await empty.evaluate(() => HealthUI.control('lang').textContent.trim() === 'EN' && document.documentElement.lang === 'ru'));
   check('the empty page raised no errors', emptyErrors.length === 0);
   if (emptyErrors.length) console.log(emptyErrors);
   check('still no network requests other than file:', [...schemes].every(s => s === 'file'));

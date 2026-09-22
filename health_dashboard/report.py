@@ -42,6 +42,7 @@ def skeleton():
  """Страница со стилями и скриптом, но ещё без данных. Порядок склейки фиксирован."""
  page=(UI/'index.html').read_text(encoding='utf-8')
  page=sub(page,'/*__STYLES__*/',font_faces()+(UI/'styles.css').read_text(encoding='utf-8'))
+ page=sub(page,'/*__I18N__*/',(UI/'i18n.js').read_text(encoding='utf-8'))
  page=sub(page,'/*__APP__*/',(UI/'app.js').read_text(encoding='utf-8'))
  page=sub(page,'/*__STORY__*/',(UI/'story.js').read_text(encoding='utf-8'))
  page=sub(page,'/*__ARCHIVE__*/',(UI/'archive.js').read_text(encoding='utf-8'))

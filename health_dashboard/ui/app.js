@@ -2,7 +2,7 @@
 const EMBEDDED_MAIN = /*__MAIN_DATA__*/; const EMBEDDED_SLEEP = /*__SLEEP_DATA__*/;
 const known={steps:['Шаги','шаги','sum'],exercise_min:['Упражнения','мин','sum'],walk_run_km:['Ходьба и бег','км','sum'],cycling_km:['Вело-дистанция','км','sum'],swimming_km:['Плавание','км','sum'],active_kcal:['Активные калории','ккал','sum'],resting_hr:['Пульс покоя','уд/мин','mean'],vo2max:['VO₂max','мл/кг/мин','mean'],sleep_hours:['Календарный сон','ч','mean']};
 let state={main:EMBEDDED_MAIN,sleep:EMBEDDED_SLEEP,chartKind:{},smooth:{},sleepMode:'window',isDemo:/*__IS_DEMO__*/,imported:false,fromArchive:false,tab:'story',metric:'steps',detail:null,notes:[]};
-const $=s=>document.querySelector(s), app=$('#app'); const monthName=m=>/^\d{4}$/.test(m)?m:new Date(m+'-01T12:00:00').toLocaleDateString('ru-RU',{month:'short',year:'numeric'}); const n=v=>Number(v); const fmt=(v,d=0)=>v==null?'—':new Intl.NumberFormat('ru-RU',{maximumFractionDigits:d,minimumFractionDigits:d}).format(v);
+const $=s=>document.querySelector(s), app=$('#app'); const monthName=m=>/^\d{4}$/.test(m)?m:new Date(m+'-01T12:00:00').toLocaleDateString(localeTag(),{month:'short',year:'numeric'}); const n=v=>Number(v); const fmt=(v,d=0)=>v==null?'—':new Intl.NumberFormat(localeTag(),{maximumFractionDigits:d,minimumFractionDigits:d}).format(v);
 // Every value from a data file goes through esc() before it reaches innerHTML.
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); const monthIdx=m=>/^\d{4}$/.test(m)?Number(m)*12:Number(m.slice(0,4))*12+Number(m.slice(5,7))-1; const idxToMonth=i=>Math.floor(i/12)+'-'+String(i%12+1).padStart(2,'0'); const daysIn=m=>new Date(Number(m.slice(0,4)),Number(m.slice(5,7)),0).getDate();
 function safeDate(x){return /^\d{4}-(0[1-9]|1[0-2])$/.test(x)} function months(){return [...new Set(state.main.monthly.filter(x=>safeDate(x.month)).map(x=>x.month))].sort()} function metricRows(metric){return state.main.monthly.filter(x=>x.metric===metric&&safeDate(x.month))} function activeMetrics(){return Object.keys(known).filter(k=>metricRows(k).length)}
@@ -64,7 +64,7 @@ function statCards(rows,unit,rec){let p=periodValue(rows),valid=rows.filter(x=>x
 // вписывал маленький рисунок в середину пустой карточки.
 // Подпись месяца на оси — в привычном здесь порядке: месяц, точка, год. Внутри
 // программы месяц всегда YYYY-MM, наружу он выходит только через эту функцию.
-const axisMonth=ix=>{let [y,m]=idxToMonth(ix).split('-');return m+'.'+y};
+const axisMonth=ix=>{let [y,m]=idxToMonth(ix).split('-');return currentLang()==='ru'?m+'.'+y:m+'/'+y};
 const CHART_W=1200,CHART_H=400,CHART_PAD={l:104,r:26,t:24,b:66};
 // Пульс покоя по умолчанию столбиками: месячное среднее — это оценка за месяц,
 // а не точка на непрерывной кривой, и столбик врёт об этом меньше линии.
@@ -273,7 +273,7 @@ const THEME_ICON={sun:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="1
  moon:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>'};
 const systemDark=()=>window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
 function currentTheme(){return document.documentElement.dataset.theme||(systemDark()?'dark':'light')}
-function paintTheme(){let b=$('#theme');if(!b)return;let dark=currentTheme()==='dark',label=dark?'Светлая тема':'Тёмная тема';b.innerHTML=dark?THEME_ICON.sun:THEME_ICON.moon;b.setAttribute('aria-label',label);b.title=label;b.dataset.theme=dark?'dark':'light'}
+function paintTheme(){let b=$('#theme');if(!b)return;let dark=currentTheme()==='dark',label=t(dark?'theme.light':'theme.dark');b.innerHTML=dark?THEME_ICON.sun:THEME_ICON.moon;b.setAttribute('aria-label',label);b.title=label;b.dataset.theme=dark?'dark':'light'}
 function setTheme(t){document.documentElement.dataset.theme=t;state.theme=t;paintTheme()}
 function bindTheme(){let b=$('#theme');if(!b)return;b.onclick=()=>setTheme(currentTheme()==='dark'?'light':'dark');if(window.matchMedia)window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',paintTheme);paintTheme()}
 bindTheme();$('#reset').onclick=()=>{$('#from').value='';$('#to').value='';$('#scale').value='month';$('#coverage').value='0';$('#preset').value='all';state={main:null,sleep:null,chartKind:{},smooth:{},sleepMode:'window',isDemo:false,imported:false,fromArchive:false,tab:'story',metric:'steps',detail:null,notes:[],birthYear:state.birthYear,birthText:state.birthText,sex:state.sex};document.querySelectorAll('[data-tab]').forEach(x=>x.setAttribute('aria-selected',x.dataset.tab==='story'));render()};$('#mainFile').onchange=e=>readFile(e.target,o=>{let note=validateMain(o);state.main=o;state.sleep=null;state.sleepMode='calendar';state.isDemo=false;state.imported=true;state.fromArchive=false;state.metric=activeMetrics()[0]||'steps';state.detail=null;initControls();render();show(('Основной набор импортирован локально. Сон очищен, чтобы не смешивать наборы. '+note).trim())});$('#sleepFile').onchange=e=>readFile(e.target,o=>{validateSleep(o);state.sleep=o;state.sleepMode='window';render();show('Файл окон сна импортирован локально.')});
@@ -344,6 +344,7 @@ const HealthUI={
  version:1,
  state:()=>state,
  sportYears,setTheme,currentTheme,sleepStages,
+ setLang,currentLang,t,tPlural,translateStatic,
  setState:patch=>Object.assign(state,patch),
  control:name=>document.querySelector('[data-ui="'+name+'"]'),
  fragment:markup=>{let t=document.createElement('template');t.innerHTML=markup;return t.content},

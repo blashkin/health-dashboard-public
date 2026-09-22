@@ -155,6 +155,7 @@ button.big{min-height:var(--control-lg);padding:0 var(--s-6);font-size:1.05rem}
 .story-who{margin:var(--s-1) 0 var(--s-3);font-size:.9rem;color:var(--muted)}
 .foot{margin-top:var(--s-6);padding:var(--s-4) 0 var(--s-2);border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:var(--s-2) var(--s-4);font-size:.82rem;color:var(--faint)}.foot a{color:var(--second)}
 
+.lang{min-width:var(--control);padding:0 var(--s-2);font-weight:700;letter-spacing:.04em;font-size:.82rem}
 .theme{width:var(--control);padding:0;display:inline-flex;align-items:center;justify-content:center}.theme svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
 .stack{width:100%;height:auto;display:block}.stack text{font-size:12px;fill:var(--muted)}.stack .axis{stroke:var(--line)}
