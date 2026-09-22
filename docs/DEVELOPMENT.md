@@ -96,6 +96,8 @@ node tests/ui/browser.cjs
 ```
 
 Playwright is resolved from a local install or from `PLAYWRIGHT_MODULE=/path/to/playwright`.
+`PLAYWRIGHT_BROWSER=webkit` runs the same checks in WebKit (Safari's engine) instead of
+the installed Chrome; it needs `npx playwright install webkit` once.
 Chrome is taken through `channel: 'chrome'`; a different binary can be given with
 `CHROME_PATH`. The script takes the dashboard path as its first argument or from
 `HEALTH_DASHBOARD_HTML` and defaults to `out/check/dashboard.html`; the empty page is

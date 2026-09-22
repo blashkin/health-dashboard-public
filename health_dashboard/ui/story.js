@@ -312,33 +312,6 @@ function lateStarters(){
      earliest=starts.length?starts.map(x=>x[1]).sort()[0]:null;
  return starts.filter(x=>Number(x[1])-Number(earliest)>=2).map(x=>x[0])}
 
-const EVERYDAY={steps:{up:'вы стали ходить больше',down:'вы стали ходить меньше',flat:'вы ходите примерно так же'},
- exercise_min:{up:'целенаправленных занятий стало больше',down:'целенаправленных занятий стало меньше',flat:'целенаправленных занятий примерно столько же'},
- sleep_hours:{up:'сон стал длиннее',down:'сон стал короче',flat:'сон почти не изменился'}};
-const INNER={vo2max:{up:'выносливость стала выше',down:'выносливость стала ниже',flat:'выносливость держится на прежнем уровне'},
- resting_hr:{up:'сердцу в покое стало напряжённее',down:'сердце в покое стало спокойнее',flat:'пульс покоя держится ровно'}};
-function joinRu(a){return a.length<2?(a[0]||''):a.slice(0,-1).join(', ')+' и '+a.at(-1)}
-
-// Абзац-вывод: направления словами, без единиц и без чисел вообще. Первое, что читает
-// человек, не должно требовать словаря; числа идут вторым слоем, ниже по странице.
-function coverParagraph(){
- let out=[],
-     day=Object.keys(EVERYDAY).map(m=>[m,archDir(m)]).filter(x=>x[1]).map(x=>EVERYDAY[x[0]][x[1]]),
-     inner=Object.keys(INNER).map(m=>[m,archDir(m)]).filter(x=>x[1]).map(x=>INNER[x[0]][x[1]]);
- out.push(day.length?'С начала архива '+joinRu(day)+'.':'Про повседневную подвижность в архиве пока слишком мало записей.');
- out.push(inner.length?'Со стороны физиологии '+joinRu(inner)+'.':'Про пульс покоя и выносливость в архиве пока слишком мало записей.');
- // Разные полюса рядом — это не «всё хорошо» и не «всё плохо», и прятать одно за другим нельзя.
- if(archDir('resting_hr')==='up'&&(archDir('vo2max')==='up'||archDir('steps')==='up'))
-  out.push('Это два разных сигнала, а не одна общая картина: смотреть их стоит по отдельности, а не усреднять.');
- let part=[...partialYears()].sort().at(-1),late=lateStarters();
- if(part&&months().at(-1).slice(0,4)===part)
-  out.push('Последний год в архиве ещё не закончен, поэтому с полными годами он здесь не сравнивается.');
- if(late.length)
-  out.push(joinRu(late.map(m=>(NORMS[m]||{}).label||m))+' начали записывать заметно позже остального, поэтому «до» и «после» для него сравнить не с чем.');
- if(out.length<3)
-  out.push('Год здесь — среднее только по дням с записью, а годы без записей не заменяются нулями.');
- return out.slice(0,5).join(' ')}
-
 // Место последнего полного года среди прошлых полных лет: «выше, чем в N из M».
 function rankAmongYears(metric){let full=fullYears(metric);if(full.length<2)return null;
  let base=full.at(-1),others=full.slice(0,-1);
@@ -380,7 +353,7 @@ const TONE_WORD={good:'хорошо',watch:'обратить внимание',n
 // ——— Разметка обложки ————————————————————————————————————————————————————————
 function storyCover(){
  let chips=coverChips();
- return `<section class="panel cover"><p class="lede">${esc(coverParagraph())}</p>
+ return `<section class="panel cover">
   <div class="chips">${chips.map(c=>`<div class="chip tone-${esc(c.tone)}">
    <div class="chip-title">${esc(c.title)}</div>
    <div class="chip-line">${esc(c.line)}</div>
@@ -763,5 +736,5 @@ function storyTab(){
 // Шов раздела: браузерные проверки держатся за него, а не за разметку.
 const STORY={yearly,yearStatus,horizons,trendVerdict,weeklyMinutes,fullYears,partialYears,
  storyRows,sleepIsWindows,compareTo,percentileBand,bands,zone,weeklyFromDaily,
- coverParagraph,coverChips,storyWhoNote,storyTrend,seasonNote,chartNotes,storyFactList,wallCells,hrCategory,storyHorizons,unitFor,plural,ruler,refs,normBlock,storyChange,storySources,SOURCE_NO,archDir,rankAmongYears,storyAge,ageInYear,STORY_UNIT,
+ coverChips,storyWhoNote,storyTrend,seasonNote,chartNotes,storyFactList,wallCells,hrCategory,storyHorizons,unitFor,plural,ruler,refs,normBlock,storyChange,storySources,SOURCE_NO,archDir,rankAmongYears,storyAge,ageInYear,STORY_UNIT,
  NOISE,POLE,STATUS_WORD,STORY_METRICS,SOURCES,NORMS,WORKOUT_NORM,NOISE_NOTE,CHECKED};

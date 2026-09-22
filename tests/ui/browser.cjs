@@ -84,8 +84,10 @@ function archiveOf(xml) {
 let browser = null;
 
 (async () => {
-  const { chromium } = loadPlaywright();
-  browser = await chromium.launch(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : { channel: 'chrome' });
+  // PLAYWRIGHT_BROWSER=webkit runs the same checks in WebKit, the engine behind Safari.
+  const pw = loadPlaywright();
+  browser = process.env.PLAYWRIGHT_BROWSER === 'webkit' ? await pw.webkit.launch()
+    : await pw.chromium.launch(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : { channel: 'chrome' });
   const page = await browser.newPage();
   const schemes = new Set(), errors = [];
   page.on('request', r => schemes.add(r.url().split(':')[0]));
@@ -332,8 +334,7 @@ let browser = null;
   check('the step plateau follows age', /плато/.test(norms.stepsYoungPlateau) && /плато/.test(norms.stepsOldPlateau));
   check('vo2max shows no ruler until the year of birth is known', norms.vo2NoAge === 0);
 
-  // The opening paragraph. It speaks in directions, so a flat archive must not borrow
-  // the words of a moving one, and the first thing a reader meets carries no units at all.
+  // The cover chips. They speak in directions, and the phrase comes before the figure.
   const cover = await page.evaluate(() => {
     const cal = (year, i) => new Date(Number(year), i + 1, 0).getDate();
     const rows = (metric, year, value, agg) => Array.from({ length: 12 }, (_, i) => {
@@ -341,28 +342,15 @@ let browser = null;
       return { metric, month: `${year}-${String(i + 1).padStart(2, '0')}`,
         value: agg === 'sum' ? value * days : value, observed_days: days, calendar_days: days, aggregation: agg };
     });
-    const years = (metric, value, agg) => ['2021', '2022', '2023'].flatMap(y => rows(metric, y, value, agg));
     HealthUI.setState({ sleep: null, birthYear: null, sex: null, main: { sources: {}, monthly: [
-      ...years('steps', 8000, 'sum'), ...years('exercise_min', 30, 'sum'),
-      ...years('resting_hr', 62, 'mean_observed_days'), ...years('vo2max', 44, 'mean_observed_days')] } });
-    const flat = HealthUI.story.coverParagraph();
-    HealthUI.setState({ main: { sources: {}, monthly: [
       ...rows('steps', '2021', 6000, 'sum'), ...rows('steps', '2022', 7200, 'sum'), ...rows('steps', '2023', 8400, 'sum'),
       ...rows('resting_hr', '2021', 60, 'mean_observed_days'), ...rows('resting_hr', '2022', 66, 'mean_observed_days'),
       ...rows('resting_hr', '2023', 72, 'mean_observed_days'),
       ...rows('vo2max', '2021', 40, 'mean_observed_days'), ...rows('vo2max', '2022', 44, 'mean_observed_days'),
       ...rows('vo2max', '2023', 48, 'mean_observed_days')] } });
-    const moving = HealthUI.story.coverParagraph();
-    const chips = HealthUI.story.coverChips();
-    return { flat, moving, chips, sentences: moving.split(/(?<=\.)\s+/).length };
+    return { chips: HealthUI.story.coverChips(), lede: !!document.querySelector('.lede') };
   });
-  check('a flat archive is not described as rising or falling',
-    !/растёт|снижается|снизил|вырос/.test(cover.flat));
-  check('a flat archive still says something', cover.flat.length > 40);
-  check('a moving archive is described as moving', /растёт|вырос|больше/.test(cover.moving));
-  check('the opening paragraph carries no figures', !/\d/.test(cover.flat) && !/\d/.test(cover.moving));
-  check('the opening paragraph is 3 to 5 sentences', cover.sentences >= 3 && cover.sentences <= 5);
-  check('rising endurance beside a rising pulse is named as a split signal', /разн|сигнал/.test(cover.moving));
+  check('there is no prose verdict above the chips', cover.lede === false);
   check('the three chips lead with a phrase and keep the figure second',
     cover.chips.length === 3 && cover.chips.every(c => c.line.length > 0 && !/\d/.test(c.line)));
   check('the heart chip is not coloured as good',

@@ -30,7 +30,7 @@ button.primary{color:#fff;background:var(--accent);border-color:var(--accent)}bu
 
 /* Заметка идёт во всю ширину карточки. Колонка в 62 символа оставляла половину
    карточки пустой, и текст читался как случайно прибитый к левому краю. */
-.lede{font-size:1.2rem;line-height:1.55;margin:var(--s-1) 0 var(--s-4)}
+
 .chips{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s-3)}
 .chip{border:1px solid var(--line);border-radius:var(--r-l);padding:var(--s-4);background:#fff}
 .chip-title{color:var(--muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
