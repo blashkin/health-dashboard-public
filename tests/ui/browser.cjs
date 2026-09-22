@@ -570,6 +570,15 @@ let browser = null;
   check('stage shares of a month add up to one', stages.sumsOk === true);
   check('months before the staging watch are all «без стадии», months after have deep and REM', stages.earlyUnspecified === true && stages.lateStaged === true);
   check('the stages block has a row per year and bars per month', stages.yearRows === true && stages.bars === true);
+  check('every legend item of the stages block explains its stage on hover', await page.evaluate(() => {
+    const items = [...HealthUI.control('app').querySelectorAll('[data-role="sleep-stages"] .legend .help')];
+    if (items.length !== 4 || !items.every(i => i.dataset.help.length > 40 && i.getAttribute('tabindex') === '0')) return false;
+    const rem = items.find(i => /REM/.test(i.textContent)); if (!/быстрые движения глаз/.test(rem.dataset.help)) return false;
+    const hidden = getComputedStyle(rem, '::after').display === 'none'; rem.focus();
+    const shown = getComputedStyle(rem, '::after').display === 'block' && getComputedStyle(rem, '::after').content.includes('быстрые'); rem.blur();
+    const noteClean = !/медленный сон/.test(HealthUI.control('app').querySelector('[data-role="sleep-stages"] .chart-note').textContent);
+    return hidden && shown && noteClean;
+  }));
   await page.click('[data-tab="story"]');
   check('the story tab has no stages block', await page.evaluate(() => !HealthUI.control('app').querySelector('[data-role="sleep-stages"]')));
   await page.click('[data-tab="workouts"]');
