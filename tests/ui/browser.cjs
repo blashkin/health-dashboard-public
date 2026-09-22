@@ -901,6 +901,31 @@ let browser = null;
     return { literals, inline, flipped: was !== now && before !== after, icon: icon === now, label,
       back: HealthUI.currentTheme() === was && paper() === before, stored: (() => { try { return localStorage.length } catch (e) { return 0 } })() };
   });
+  // Графики: полоса на каждую вторую клетку ряда, подсказка у точки по наведению и по фокусу.
+  await page.click('[data-tab="overview"]');
+  const chartTips = await page.evaluate(() => {
+    const wrap = HealthUI.control('app').querySelector('.chart-wrap'), dots = wrap.querySelectorAll('[data-role="dot"],[data-role="bar"]'), bands = wrap.querySelectorAll('.band');
+    const tip = wrap.querySelector('.chart-tip'), dot = dots[Math.floor(dots.length / 2)];
+    const hiddenBefore = tip.classList.contains('hidden');
+    dot.dispatchEvent(new Event('mouseenter')); const shown = !tip.classList.contains('hidden') && tip.textContent.includes(' · ') && /\d/.test(tip.textContent) && tip.textContent.includes('\n');
+    const inside = tip.getBoundingClientRect().left >= wrap.getBoundingClientRect().left - 1;
+    dot.dispatchEvent(new Event('mouseleave')); const hiddenAfter = tip.classList.contains('hidden');
+    dot.focus(); const onFocus = !tip.classList.contains('hidden'); dot.blur();
+    return { bands: bands.length, dots: dots.length, hiddenBefore, shown, inside, hiddenAfter, onFocus, bandFill: getComputedStyle(bands[0]).fill !== 'none' };
+  });
+  check('every second month gets a band behind the chart', chartTips.bands > 0 && Math.abs(chartTips.bands - Math.floor(128 / 2)) <= 1 && chartTips.bandFill);
+  check('hovering a point shows a tip with month and value, leaving hides it', chartTips.hiddenBefore && chartTips.shown && chartTips.hiddenAfter && chartTips.inside);
+  check('focusing a point shows the same tip', chartTips.onFocus);
+  await page.click('[data-tab="season"]');
+  const seasonTips = await page.evaluate(() => {
+    const wrap = HealthUI.control('app').querySelector('.chart-wrap'), pts = wrap.querySelectorAll('[data-tip]'), tip = wrap.querySelector('.chart-tip');
+    if (!pts.length || !tip) return { pts: pts.length, tip: !!tip };
+    pts[0].dispatchEvent(new Event('mouseenter')); const shown = !tip.classList.contains('hidden') && /\d{4}/.test(tip.textContent) && tip.textContent.includes('\n');
+    pts[0].dispatchEvent(new Event('mouseleave'));
+    return { pts: pts.length, tip: true, shown, bands: wrap.querySelectorAll('.band').length, titles: wrap.querySelectorAll('title').length };
+  });
+  check('the seasonality chart has six month bands and the same tips, no system titles', seasonTips.bands === 6 && seasonTips.shown === true && seasonTips.titles === 0);
+  await page.click('[data-tab="story"]');
   check('no colour literal outside the token blocks', theme.literals.length === 0 && theme.inline === 0);
   check('the theme toggle flips the theme and the paper colour', theme.flipped && theme.back);
   check('the toggle shows the other theme and names it', theme.icon && /тема/.test(theme.label));
