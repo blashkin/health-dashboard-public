@@ -371,19 +371,11 @@ let browser = null;
     cover.chips.find(c => c.metric === 'steps').tone === 'good');
   await reload();
 
-  // Typed reconciliation text must stay text.
-  await page.click('[data-tab="reconcile"]');
-  await page.fill('[data-ui="recComment"]', PAYLOAD);
-  await page.click('[data-ui="saveRec"]');
-  await page.waitForTimeout(50);
-  check('typed comment does not execute', await page.evaluate(() => window.__xss === undefined));
-  check('typed comment is shown as text', (await page.textContent('[data-ui="app"]')).includes(PAYLOAD));
-
   // Imported file contents must stay text on every tab.
   await reload();
   await page.setInputFiles('[data-ui="mainFile"]', tempJson('approved_monthly.json', hostileMain()));
   await page.waitForTimeout(50);
-  for (const tab of ['story', 'overview', 'activity', 'workouts', 'heart', 'sleep', 'season', 'quality', 'reconcile']) {
+  for (const tab of ['story', 'overview', 'activity', 'workouts', 'heart', 'sleep', 'season', 'quality']) {
     await page.click(`[data-tab="${tab}"]`);
     await page.waitForTimeout(20);
   }
@@ -418,12 +410,30 @@ let browser = null;
   check('an empty data set shows the invitation instead of empty tabs',
     await page.evaluate(() => !HealthUI.control('start').className.includes('hidden') && getComputedStyle(HealthUI.control('nav')).display === 'none'));
 
-  // Heart smoothing keeps its state across re-renders.
+  // Smoothing is a per-chart select under the chart and keeps its state across re-renders.
   await reload();
   await page.click('[data-tab="heart"]');
-  await page.click('[data-ui="smooth"]');
+  await page.selectOption('[data-smooth-key="heart"]', '3');
   await page.waitForTimeout(50);
-  check('smoothing checkbox stays checked after re-render', await page.evaluate(() => HealthUI.control('smooth').checked === true && HealthUI.state().smoothHeart === true));
+  check('smoothing select stays on 3 months after re-render', await page.evaluate(() => document.querySelector('[data-smooth-key="heart"]').value === '3' && HealthUI.state().smooth.heart === '3'));
+  check('the other chart is not smoothed by the heart select', await page.evaluate(() => (HealthUI.state().smooth.activity || '0') === '0'));
+  check('the trend caption is written in words under the chart', await page.evaluate(() => /Тренд по полным годам всего архива: (растёт|снижается|ровно|данных мало)/.test(document.querySelector('.chart-trend')?.textContent || '')));
+  const twelve = await page.evaluate(() => {
+    const row = (m, v, d) => ({ month: m, value: v, observed_days: d });
+    const ms = ['2020-01','2020-02','2020-03','2020-04','2020-05','2020-06','2020-07','2020-08','2020-09','2020-10','2020-11','2020-12'];
+    const full = ms.map(m => row(m, 10, 1)), nine = ms.map((m, i) => i < 3 ? row(m, null, 0) : row(m, 10, 1)), eight = ms.map((m, i) => i < 4 ? row(m, null, 0) : row(m, 10, 1));
+    const sums = ms.map((m, i) => ({ ...row(m, i + 1, 5), aggregation: 'sum' }));
+    return { full: HealthUI.smoothRowsN(full, 12)[11].value, nine: HealthUI.smoothRowsN(nine, 12)[11].value, eight: HealthUI.smoothRowsN(eight, 12)[11].value, sums: HealthUI.smoothRowsN(sums, 12)[11].value };
+  });
+  check('a 12-month window needs at least nine months', twelve.full === 10 && twelve.nine === 10 && twelve.eight === null);
+  check('sums are averaged per month, not weighted by days', twelve.sums === 6.5);
+  // Cards on the heart and sleep tabs: one mean, the two extreme months, the record count.
+  const heartCards = await page.evaluate(() => [...document.querySelectorAll('[data-ui="app"] .card .label')].map(x => x.textContent));
+  check('the heart tab shows its cards', ['Среднее за период','Самый низкий месяц','Самый высокий месяц','Дней с измерением'].every(l => heartCards.includes(l)));
+  check('the heart tab compares with the same months a year earlier', (await page.textContent('[data-ui="app"]')).includes('Сравнение с теми же месяцами годом ранее'));
+  await page.click('[data-tab="sleep"]');
+  const sleepText = await page.textContent('[data-ui="app"]');
+  check('the sleep tab shows its cards', sleepText.includes('Среднее за период') && (sleepText.includes('Окон с записью') || sleepText.includes('Дней с записью')));
   const smoothing = await page.evaluate(() => {
     const rows = [{ month: '2020-01', value: 10, observed_days: 1 }, { month: '2020-02', value: 20, observed_days: 2 }, { month: '2020-03', value: 30, observed_days: 3 }];
     const gapped = [{ month: '2020-01', value: 10, observed_days: 1 }, { month: '2020-03', value: 20, observed_days: 2 }, { month: '2020-04', value: 30, observed_days: 3 }];
@@ -813,7 +823,7 @@ let browser = null;
   // Отступы проверяются не выборочно, а сплошь: каждая вкладка, каждый видимый элемент.
   // Ненулевое значение padding / margin / gap обязано совпадать со ступенью шкалы.
   // Нутро SVG и строчные элементы пропускаются: там расстояния задаёт текст.
-  const TABS = ['story','overview','activity','workouts','heart','sleep','season','quality','reconcile'];
+  const TABS = ['story','overview','activity','workouts','heart','sleep','season','quality'];
   const strays = [], dots = [];
   for (const tab of TABS) {
     await page.click(`[data-tab="${tab}"]`);

@@ -47,7 +47,7 @@ class ReportTests(unittest.TestCase):
   """Браузерные проверки держатся за window.HealthUI и data-атрибуты, а не за разметку."""
   html=page()
   self.assertIn('window.HealthUI=HealthUI',html)
-  for name in ('from','to','coverage','reset','mainFile','sleepFile','smooth','toggleSleep','recComment','saveRec','app','controls',
+  for name in ('from','to','coverage','reset','mainFile','sleepFile','toggleSleep','app','controls',
                'archiveFile','archiveProgress','archiveCancel','resetHint','periodTitle','alert'):
    self.assertIn('data-ui="%s"'%name,html,name)
   # Уведомления рождаются во время работы, поэтому проверяется их движок, а не разметка.

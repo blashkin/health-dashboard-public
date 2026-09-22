@@ -3,8 +3,7 @@
 Turn an Apple Health export into a dashboard of your own long-term trends — activity,
 workouts, heart and sleep — entirely on your own machine. The first screen, «Главное»,
 sets your numbers against published guidelines (WHO and others, each with its source);
-the other tabs show the series themselves, how complete the records are, and a place to
-reconcile a month with the Health app.
+the other tabs show the series themselves and how complete the records are.
 
 The interface is in Russian, and so is most of the documentation; this README, the
 data contract and the development notes are in English. **Русская версия этого файла —
