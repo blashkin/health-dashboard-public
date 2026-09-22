@@ -69,6 +69,12 @@ Browser — 128 checks against a build made by Python:
 ```sh
 python3 -m health_dashboard demo -o out/demo
 
+The typeface is embedded. `health_dashboard/ui/fonts/` holds Golos Text (SIL OFL,
+`OFL.txt` beside it): four weights, Cyrillic and Latin subsets from Google Fonts, about
+77 KB together, listed in `manifest.json` with their `unicode-range`. `report.font_faces()`
+turns them into `@font-face` rules with `data:` URIs in front of `styles.css`, and the
+CSP allows `font-src data:`. To change the face, replace the files and the manifest.
+
 The empty page (no data, the archive is opened in the browser) is built with
 `python3 -m health_dashboard page -o out/page`; `report.build(None, None)` is the
 same thing from Python. With `EMBEDDED_MAIN === null` the page shows the start

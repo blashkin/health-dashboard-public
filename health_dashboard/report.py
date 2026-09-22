@@ -23,10 +23,25 @@ def sub(s,old,new,count=1):
  if found!=count: raise ValueError('Плейсхолдер %s встретился %d раз вместо %d.'%(old,found,count))
  return s.replace(old,new)
 
+FONTS=UI/'fonts'
+
+def font_faces():
+ """@font-face для встроенного шрифта: файлы из ui/fonts как data:-URI.
+
+ Страница офлайн и по CSP ничего не загружает, поэтому шрифт едет внутри файла.
+ Сабсеты Google Fonts маленькие: восемь файлов Golos Text — около 77 КБ."""
+ import base64
+ faces=[]
+ for f in json.loads((FONTS/'manifest.json').read_text(encoding='utf-8')):
+  data=base64.b64encode((FONTS/f['file']).read_bytes()).decode('ascii')
+  faces.append("@font-face{font-family:'Golos Text';font-style:normal;font-weight:%d;font-display:swap;"
+               "src:url(data:font/woff2;base64,%s) format('woff2');unicode-range:%s}"%(f['weight'],data,f['unicode_range']))
+ return ''.join(faces)
+
 def skeleton():
  """Страница со стилями и скриптом, но ещё без данных. Порядок склейки фиксирован."""
  page=(UI/'index.html').read_text(encoding='utf-8')
- page=sub(page,'/*__STYLES__*/',(UI/'styles.css').read_text(encoding='utf-8'))
+ page=sub(page,'/*__STYLES__*/',font_faces()+(UI/'styles.css').read_text(encoding='utf-8'))
  page=sub(page,'/*__APP__*/',(UI/'app.js').read_text(encoding='utf-8'))
  page=sub(page,'/*__STORY__*/',(UI/'story.js').read_text(encoding='utf-8'))
  page=sub(page,'/*__ARCHIVE__*/',(UI/'archive.js').read_text(encoding='utf-8'))

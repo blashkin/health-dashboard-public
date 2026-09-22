@@ -108,4 +108,5 @@ plainly when it is missing. Reports are welcome.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). The embedded typeface, Golos Text, is under the SIL Open
+Font License — see [health_dashboard/ui/fonts/OFL.txt](health_dashboard/ui/fonts/OFL.txt).

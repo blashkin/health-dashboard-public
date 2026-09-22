@@ -75,6 +75,14 @@ class ReportTests(unittest.TestCase):
    self.assertIn(mark,html)
   self.assertNotIn('/*__',html)
 
+ def test_font_is_embedded_and_allowed_by_csp(self):
+  """Golos Text едет внутри файла: четыре начертания, кириллица и латиница, font-src data:."""
+  html=report.skeleton()
+  self.assertEqual(html.count("font-family:'Golos Text';font-style:normal;font-weight:"),8)
+  for w in (400,500,600,700): self.assertIn('font-weight:%d;'%w,html)
+  self.assertIn('font-src data:',html)
+  self.assertIn('data:font/woff2;base64,',html)
+
  def test_story_file_reaches_the_build(self):
   """Раздел «Главное» живёт в отдельном файле: сборка обязана склеить и его."""
   html=page()
