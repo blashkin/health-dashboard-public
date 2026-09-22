@@ -6,8 +6,9 @@ sets your numbers against published guidelines (WHO and others, each with its so
 the other tabs show the series themselves, how complete the records are, and a place to
 reconcile a month with the Health app.
 
-The interface is in Russian. This README and the data contract are in English; the
-methodology and the rest of the documentation are in Russian.
+The interface is in Russian, and so is most of the documentation; this README, the
+data contract and the development notes are in English. **Русская версия этого файла —
+[README.ru.md](README.ru.md).**
 
 ## One way in
 
@@ -93,8 +94,10 @@ The limits worth knowing before you read any number are listed in
 
 macOS, Python 3.9.6, the interface in Chrome. Windows, Linux, Safari and Firefox are
 untested — nothing platform-specific is used, but nobody has run it there yet. Reading
-the archive in the page needs `DecompressionStream`; the page checks for it and says so
-plainly when it is missing. Reports are welcome.
+the archive in the page needs `DecompressionStream` (Chrome and Edge 80+, Firefox 113+,
+Safari 16.4+); the page checks for it and says so plainly when it is missing. The page
+is a single file of about 300 KB with the typeface embedded; it works from disk, with
+no server. Reports are welcome.
 
 ## License
 
