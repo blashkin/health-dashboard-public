@@ -524,6 +524,13 @@ let browser = null;
   // Доля вида спорта обязана стоять при своём названии. Раньше её колонка уезжала
   // к противоположному краю ячейки, и у левой диаграммы проценты читались как числа правой.
   await page.click('[data-tab="workouts"]');
+  // Занятия называются словом и склоняются по числу перед ними, без «зан.».
+  check('sessions are spelled out and declined, never abbreviated', await page.evaluate(() => {
+    const t = HealthUI.control('app').textContent;
+    return !/зан\./.test(t) && /\d\s*занятий/.test(t)
+      && (!/1\s091/.test(t) || /1\s091\s*занятие/.test(t));
+  }));
+
   check('the share of a sport stands next to its name, not at the far edge', await page.evaluate(() => {
     const rows = [...HealthUI.control('app').querySelectorAll('.pie-legend button')];
     if (!rows.length) return false;
@@ -777,6 +784,18 @@ let browser = null;
       sideScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth };
   });
   check('the button, its caption, the rules, the period selects and the cards share one right edge', edges.rightOk);
+
+  // Выбор показателя кончается там же, где карточка: и когда он стоит рядом
+  // с заголовком, и когда карточка узкая и он занимает всю строку.
+  check('the metric select ends where its card ends', await page.evaluate(() => {
+    const sels = [...document.querySelectorAll('main .sectionhead select')];
+    if (!sels.length) return false;
+    return sels.every(sel => {
+      const card = sel.closest('.panel');
+      const pad = parseFloat(getComputedStyle(card).paddingRight);
+      return Math.abs(card.getBoundingClientRect().right - pad - sel.getBoundingClientRect().right) <= 2;
+    });
+  }));
   check('and one left edge', edges.leftOk);
   check('no element pushes the page sideways', !edges.sideScroll);
 
