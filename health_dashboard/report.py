@@ -39,6 +39,7 @@ def build(main,sleep,demo=False):
  """Готовый файл. Данные подставляются последними: подставить что-то из них уже нельзя."""
  page=skeleton()
  page=sub(page,'/*__IS_DEMO__*/','true' if demo else 'false',2)
- page=sub(page,'/*__MAIN_DATA__*/',encode(main))
- page=sub(page,'/*__SLEEP_DATA__*/',encode(sleep))
+ # Пустая страница: данных нет, и она встречает приглашением открыть архив.
+ page=sub(page,'/*__MAIN_DATA__*/','null' if main is None else encode(main))
+ page=sub(page,'/*__SLEEP_DATA__*/','null' if sleep is None else encode(sleep))
  return page

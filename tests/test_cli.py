@@ -28,6 +28,13 @@ class CliTests(unittest.TestCase):
   self.assertEqual(marker['tool'],'health-dashboard')
   self.assertIn('schema',marker); self.assertIn('version',marker)
   self.assertEqual(marker['mode'],'demo')
+ def test_page_writes_an_empty_dashboard_without_data(self):
+  out=self.path/'page'
+  self.assertEqual(cli.main(['page','-o',str(out)]),0)
+  html=(out/'dashboard.html').read_text(encoding='utf-8')
+  self.assertIn('const EMBEDDED_MAIN = null',html)
+  self.assertFalse((out/'data').exists())
+  self.assertEqual(json.loads((out/cli.MARKER).read_text(encoding='utf-8'))['mode'],'page')
  def test_second_run_updates_in_place(self):
   out=self.path/'result'
   cli.main(['demo','-o',str(out)])

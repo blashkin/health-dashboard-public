@@ -69,6 +69,16 @@ def cmd_demo(a):
   aggregate.write_text(data/name,json.dumps(obj,ensure_ascii=False,indent=2))
  return finish(out,files['approved_monthly.json'],files['monthly_sleep_windows.json'],'demo',a.open)
 
+def cmd_page(a):
+ """Страница без данных: открывается приглашением, архив читается в браузере."""
+ out=a.output; prepare(out,a.force)
+ dashboard=out/'dashboard.html'
+ aggregate.write_text(dashboard,report.build(None,None))
+ write_marker(out,'page')
+ print('Готово. Пустой дашборд: %s'%dashboard)
+ if a.open: webbrowser.open(dashboard.resolve().as_uri())
+ return 0
+
 def cmd_verify(a):
  folder=a.folder
  if (folder/DATA/'daily.csv').exists(): folder=folder/DATA
@@ -93,6 +103,11 @@ def parser():
  d.add_argument('--force',action='store_true',help='писать в непустой чужой каталог, не трогая посторонние файлы')
  d.add_argument('--open',action='store_true',help='открыть готовый файл в браузере')
  d.set_defaults(func=cmd_demo)
+ e=sub.add_parser('page',help='собрать пустой дашборд: архив открывается в браузере')
+ e.add_argument('-o','--output',type=Path,default=Path('out/page'),help='каталог результата')
+ e.add_argument('--force',action='store_true',help='писать в непустой чужой каталог, не трогая посторонние файлы')
+ e.add_argument('--open',action='store_true',help='открыть готовый файл в браузере')
+ e.set_defaults(func=cmd_page)
  v=sub.add_parser('verify',help='проверить согласованность готового каталога')
  v.add_argument('folder',type=Path,help='каталог результата')
  v.set_defaults(func=cmd_verify)

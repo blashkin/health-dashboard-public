@@ -9,7 +9,7 @@ reconcile a month with the Health app.
 The interface is in Russian. This README and the data contract are in English; the
 methodology and the rest of the documentation are in Russian.
 
-## Three commands
+## Four commands
 
 ```sh
 python3 -m health_dashboard demo --open
@@ -23,8 +23,13 @@ python3 -m health_dashboard build path/to/export.zip -o out/dashboard --open
 python3 -m health_dashboard verify out/dashboard
 ```
 
+```sh
+python3 -m health_dashboard page -o out/page --open
+```
+
 `demo` builds the dashboard from synthetic data, so you can see what you would get
-before handing it your own archive. `build` reads the archive and writes
+before handing it your own archive. `page` builds the page with no data at all: the
+archive is opened in the browser (next section). `build` reads the archive and writes
 `dashboard.html` with a `data/` folder beside it. `verify` re-checks that the numbers
 in the result agree with each other.
 
@@ -37,14 +42,16 @@ Exporting the archive from an iPhone is described in
 
 ## Or open the archive in the page
 
-The dashboard can also read `export.zip` by itself. Build the page once:
+The dashboard can also read `export.zip` by itself. Build the empty page once:
 
 ```sh
-python3 -m health_dashboard demo -o out/demo --open
+python3 -m health_dashboard page -o out/page --open
 ```
 
-then press **«Открыть архив»** in its header and pick your `export.zip`. The browser
-parses the archive locally and fills the same screens. Your archive never goes through
+It opens with an invitation: year of birth and sex (only for the WHO reference
+ranges), then **«Открыть архив»**. While the archive is read, the page leafs through
+the years from your birth year to today; then the same screens appear. A page built
+by `build` or `demo` already carries data and offers the button in its header instead. Your archive never goes through
 the command line, and nothing is written to disk — which also means nothing is kept:
 closing the tab discards the result and the next visit parses the archive again.
 

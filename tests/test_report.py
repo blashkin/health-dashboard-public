@@ -66,6 +66,15 @@ class ReportTests(unittest.TestCase):
   for mark in ('function perDayRows','data-pick=','function pie(','Последний год в архиве (с января)'):
    self.assertIn(mark,page)
 
+ def test_empty_page_starts_with_an_invitation(self):
+  """Страница без данных: null вместо объектов, стартовый экран и экран чтения в разметке."""
+  html=report.build(None,None)
+  self.assertIn('const EMBEDDED_MAIN = null',html)
+  self.assertIn('const EMBEDDED_SLEEP = null',html)
+  for mark in ('data-ui="start"','data-ui="loading"','data-ui="startBirth"','data-ui="startSex"','data-ui="loadYears"'):
+   self.assertIn(mark,html)
+  self.assertNotIn('/*__',html)
+
  def test_story_file_reaches_the_build(self):
   """Раздел «Главное» живёт в отдельном файле: сборка обязана склеить и его."""
   html=page()

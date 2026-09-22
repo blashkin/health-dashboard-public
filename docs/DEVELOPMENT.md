@@ -68,6 +68,12 @@ Browser — 128 checks against a build made by Python:
 
 ```sh
 python3 -m health_dashboard demo -o out/demo
+
+The empty page (no data, the archive is opened in the browser) is built with
+`python3 -m health_dashboard page -o out/page`; `report.build(None, None)` is the
+same thing from Python. With `EMBEDDED_MAIN === null` the page shows the start
+screen (`data-ui="start"`) and, while reading, the year ribbon (`data-ui="loading"`);
+`renderShell()` in app.js is the single switch between the three states.
 ```
 
 ```sh
