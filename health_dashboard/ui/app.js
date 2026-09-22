@@ -89,7 +89,7 @@ function chartToggle(key,kind,metric,annual){
 // уже посчитан для «Главного» и здесь повторяет его слово в слово.
 function trendCaption(metric){
  if(!metric||typeof storyTrend!=='function'||!(metric in NOISE))return '';
- let v=storyTrend(metric),text=v.verdict==='данных мало'?t('trend.few'):v.dir==='flat'?t('trend.flat'):v.dir==='up'?t('trend.up'):t('trend.down');
+ let v=storyTrend(metric),text=v.verdict==='few'?t('trend.few'):v.dir==='flat'?t('trend.flat'):v.dir==='up'?t('trend.up'):t('trend.down');
  return `<span class="chart-trend">${esc(t('trend.title'))}: <b>${esc(text)}</b>${v.sparseBasis?' '+esc(t('trend.sparse')):''}</span>`}
 function chartLegend(label,unit){
  return `<p class="chart-legend"><span><i class="sw-line"></i>${esc(label)}${unit?', '+esc(unit):''}</span></p>`}

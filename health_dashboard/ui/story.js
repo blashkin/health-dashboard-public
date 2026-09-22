@@ -13,7 +13,7 @@ const NOISE={steps:300,exercise_min:3,resting_hr:2,vo2max:2,sleep_hours:.25};
 // Смысловой полюс. 'up' — рост хорошо; 'watch' — рост требует внимания, снижение нейтрально
 // (выгоды снижения источники не показали); 'band' — хорошо попадание в диапазон, не «больше».
 const POLE={steps:'up',exercise_min:'up',vo2max:'up',resting_hr:'watch',sleep_hours:'band'};
-const STATUS_WORD={none:'нет записей',partial:'год ещё идёт',sparse:'мало записей',full:'полный год'};
+const STATUS_WORD={none:'status.none',partial:'status.partial',sparse:'status.sparse',full:'status.full'};
 
 // Неполнота относится к архиву целиком, а не к отдельному показателю: год обрезан тогда,
 // когда обрезана выгрузка, а не когда конкретный прибор молчал.
@@ -76,8 +76,8 @@ function toneOf(metric,dir){let p=POLE[metric];
  if(p==='up')return dir==='up'?'good':'watch';
  if(p==='watch')return dir==='up'?'watch':'neutral';
  return 'neutral'}
-function compareTo(metric,was,now){let d=now-was,t=NOISE[metric]??0,
- dir=Math.abs(d)<t?'flat':d>0?'up':'down';
+function compareTo(metric,was,now){let d=now-was,eps=NOISE[metric]??0,
+ dir=Math.abs(d)<eps?'flat':d>0?'up':'down';
  return {delta:d,dir,tone:toneOf(metric,dir)}}
 
 // Три горизонта: прошлый год, первый полный год архива, медиана всех полных лет.
@@ -99,14 +99,14 @@ function horizons(metric,allowSparse){
 // сдвиг за весь наблюдаемый размах меньше порога шума, то есть тренд неотличим от дрожания.
 function trendVerdict(metric,allowSparse){
  let full=yearly(metric).filter(y=>y.status==='full'||(allowSparse&&y.status==='sparse'));
- if(full.length<3)return {verdict:'данных мало',slope:null,span:null,years:full.length,dir:'flat',tone:'neutral'};
+ if(full.length<3)return {verdict:'few',slope:null,span:null,years:full.length,dir:'flat',tone:'neutral'};
  let xs=full.map(y=>Number(y.year)),ys=full.map(y=>y.value),
      mx=xs.reduce((s,x)=>s+x,0)/xs.length,my=ys.reduce((s,y)=>s+y,0)/ys.length,
      den=xs.reduce((s,x)=>s+(x-mx)**2,0),
      slope=den?xs.reduce((s,x,i)=>s+(x-mx)*(ys[i]-my),0)/den:0,
      span=slope*(xs.at(-1)-xs[0]),
      dir=Math.abs(span)<(NOISE[metric]??0)?'flat':span>0?'up':'down';
- return {verdict:dir==='flat'?'ровно':dir==='up'?'растёт':'снижается',slope,span,years:full.length,dir,tone:toneOf(metric,dir)}}
+ return {verdict:dir,slope,span,years:full.length,dir,tone:toneOf(metric,dir)}}
 
 // Минуты в неделю. Обрезанный год делится на недели записанных месяцев, а не на 52,18:
 // иначе восемь месяцев всегда выглядят падением объёма.
@@ -122,21 +122,21 @@ function weeklyMinutes(totalMinutes,year){
 // одного совета без ссылки на запись в SOURCES: проверка в tests/ui/browser.cjs следит.
 const CHECKED='2026-09-21';
 const SOURCES={
- paluch2022:{short:'Paluch, 2022',group:'steps',org:'Paluch A. E. и соавт.',title:'Daily steps and all-cause mortality: a meta-analysis of 15 international cohorts',where:'The Lancet Public Health',year:'2022',url:'https://pubmed.ncbi.nlm.nih.gov/35247352/',checked:CHECKED},
- saintMaurice2020:{short:'Saint-Maurice, 2020',group:'steps',org:'Saint-Maurice P. F. и соавт.',title:'Association of Daily Step Count and Step Intensity With Mortality Among US Adults',where:'JAMA',year:'2020',url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC7093766/',checked:CHECKED},
- lee2019:{short:'Lee, 2019',group:'steps',org:'Lee I-M. и соавт.',title:'Association of Step Volume and Intensity With All-Cause Mortality in Older Women',where:'JAMA Internal Medicine',year:'2019',url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC6547157/',checked:CHECKED},
- who2020:{short:'ВОЗ, 2020',group:'exercise_min',org:'Bull F. C. и соавт., Всемирная организация здравоохранения',title:'World Health Organization 2020 guidelines on physical activity and sedentary behaviour',where:'British Journal of Sports Medicine',year:'2020',url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC7719906/',checked:CHECKED},
+ paluch2022:{short:'Paluch, 2022',group:'steps',org:'Paluch A. E. {etAl}',title:'Daily steps and all-cause mortality: a meta-analysis of 15 international cohorts',where:'The Lancet Public Health',year:'2022',url:'https://pubmed.ncbi.nlm.nih.gov/35247352/',checked:CHECKED},
+ saintMaurice2020:{short:'Saint-Maurice, 2020',group:'steps',org:'Saint-Maurice P. F. {etAl}',title:'Association of Daily Step Count and Step Intensity With Mortality Among US Adults',where:'JAMA',year:'2020',url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC7093766/',checked:CHECKED},
+ lee2019:{short:'Lee, 2019',group:'steps',org:'Lee I-M. {etAl}',title:'Association of Step Volume and Intensity With All-Cause Mortality in Older Women',where:'JAMA Internal Medicine',year:'2019',url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC6547157/',checked:CHECKED},
+ who2020:{short:'{who}, 2020',group:'exercise_min',org:'Bull F. C. {etAl}, {whoFull}',title:'World Health Organization 2020 guidelines on physical activity and sedentary behaviour',where:'British Journal of Sports Medicine',year:'2020',url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC7719906/',checked:CHECKED},
  hhs2018:{short:'HHS, 2018',group:'exercise_min',org:'U.S. Department of Health and Human Services',title:'Physical Activity Guidelines for Americans, 2nd edition. Executive Summary',where:'',year:'2018',url:'https://odphp.health.gov/sites/default/files/2019-10/PAG_ExecutiveSummary.pdf',checked:CHECKED},
  cdc2023:{short:'CDC, 2023',group:'workouts',org:'Centers for Disease Control and Prevention',title:'Adult Activity: An Overview',where:'Physical Activity Basics',year:'2023',url:'https://www.cdc.gov/physical-activity-basics/guidelines/adults.html',checked:CHECKED},
- nhlbi:{short:'NHLBI',group:'resting_hr',org:'National Heart, Lung, and Blood Institute, NIH',title:'Arrhythmias — Types',where:'',year:'страница без даты издания',url:'https://www.nhlbi.nih.gov/health/arrhythmias/types',checked:CHECKED},
- aha2024:{short:'AHA, 2024',group:'resting_hr',org:'American Heart Association',title:'All About Heart Rate (Pulse)',where:'',year:'2024 (редакция 13.05.2024)',url:'https://www.heart.org/en/health-topics/high-blood-pressure/the-facts-about-high-blood-pressure/all-about-heart-rate-pulse',checked:CHECKED},
- nauman2011:{short:'Nauman, 2011',group:'resting_hr',org:'Nauman J. и соавт.',title:'Temporal changes in resting heart rate and deaths from ischemic heart disease',where:'JAMA',year:'2011',url:'https://pubmed.ncbi.nlm.nih.gov/22187277/',checked:CHECKED},
- mayo2025:{short:'Mayo Clinic, 2025',group:'resting_hr',org:'Mayo Clinic',title:'Heart rate: What’s normal?',where:'',year:'2025 (редакция 22.10.2025)',url:'https://www.mayoclinic.org/healthy-lifestyle/fitness/expert-answers/heart-rate/faq-20057979',checked:CHECKED},
- friend2015:{short:'FRIEND, 2015',group:'vo2max',org:'Kaminsky L. A., Arena R., Myers J. (реестр FRIEND)',title:'Reference Standards for Cardiorespiratory Fitness Measured With Cardiopulmonary Exercise Testing: Data From the Fitness Registry and the Importance of Exercise National Database',where:'Mayo Clinic Proceedings',year:'2015',url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC4919021/',checked:CHECKED},
- kodama2009:{short:'Kodama, 2009',group:'vo2max',org:'Kodama S. и соавт.',title:'Cardiorespiratory fitness as a quantitative predictor of all-cause mortality and cardiovascular events in healthy men and women: a meta-analysis',where:'JAMA',year:'2009',url:'https://pubmed.ncbi.nlm.nih.gov/19454641/',checked:CHECKED},
- lambe2025:{short:'Lambe, 2025',group:'vo2max',org:'Lambe R. и соавт.',title:'Investigating the accuracy of Apple Watch VO2 max measurements: A validation study',where:'PLOS ONE',year:'2025',url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC12080799/',checked:CHECKED},
- aasm2015:{short:'AASM/SRS, 2015',group:'sleep_hours',org:'Watson N. F. и соавт., AASM и Sleep Research Society',title:'Recommended Amount of Sleep for a Healthy Adult: A Joint Consensus Statement of the American Academy of Sleep Medicine and Sleep Research Society',where:'Sleep',year:'2015',url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC4434546/',checked:CHECKED},
- nsf2015:{short:'NSF, 2015',group:'sleep_hours',org:'Hirshkowitz M. и соавт., National Sleep Foundation',title:'National Sleep Foundation’s updated sleep duration recommendations: final report',where:'Sleep Health',year:'2015',url:'https://pubmed.ncbi.nlm.nih.gov/29073398/',checked:CHECKED}
+ nhlbi:{short:'NHLBI',group:'resting_hr',org:'National Heart, Lung, and Blood Institute, NIH',title:'Arrhythmias — Types',where:'',year:'{noDate}',url:'https://www.nhlbi.nih.gov/health/arrhythmias/types',checked:CHECKED},
+ aha2024:{short:'AHA, 2024',group:'resting_hr',org:'American Heart Association',title:'All About Heart Rate (Pulse)',where:'',year:'2024 ({rev} 13.05.2024)',url:'https://www.heart.org/en/health-topics/high-blood-pressure/the-facts-about-high-blood-pressure/all-about-heart-rate-pulse',checked:CHECKED},
+ nauman2011:{short:'Nauman, 2011',group:'resting_hr',org:'Nauman J. {etAl}',title:'Temporal changes in resting heart rate and deaths from ischemic heart disease',where:'JAMA',year:'2011',url:'https://pubmed.ncbi.nlm.nih.gov/22187277/',checked:CHECKED},
+ mayo2025:{short:'Mayo Clinic, 2025',group:'resting_hr',org:'Mayo Clinic',title:'Heart rate: What’s normal?',where:'',year:'2025 ({rev} 22.10.2025)',url:'https://www.mayoclinic.org/healthy-lifestyle/fitness/expert-answers/heart-rate/faq-20057979',checked:CHECKED},
+ friend2015:{short:'FRIEND, 2015',group:'vo2max',org:'Kaminsky L. A., Arena R., Myers J. ({registry} FRIEND)',title:'Reference Standards for Cardiorespiratory Fitness Measured With Cardiopulmonary Exercise Testing: Data From the Fitness Registry and the Importance of Exercise National Database',where:'Mayo Clinic Proceedings',year:'2015',url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC4919021/',checked:CHECKED},
+ kodama2009:{short:'Kodama, 2009',group:'vo2max',org:'Kodama S. {etAl}',title:'Cardiorespiratory fitness as a quantitative predictor of all-cause mortality and cardiovascular events in healthy men and women: a meta-analysis',where:'JAMA',year:'2009',url:'https://pubmed.ncbi.nlm.nih.gov/19454641/',checked:CHECKED},
+ lambe2025:{short:'Lambe, 2025',group:'vo2max',org:'Lambe R. {etAl}',title:'Investigating the accuracy of Apple Watch VO2 max measurements: A validation study',where:'PLOS ONE',year:'2025',url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC12080799/',checked:CHECKED},
+ aasm2015:{short:'AASM/SRS, 2015',group:'sleep_hours',org:'Watson N. F. {etAl}, AASM {and} Sleep Research Society',title:'Recommended Amount of Sleep for a Healthy Adult: A Joint Consensus Statement of the American Academy of Sleep Medicine and Sleep Research Society',where:'Sleep',year:'2015',url:'https://pmc.ncbi.nlm.nih.gov/articles/PMC4434546/',checked:CHECKED},
+ nsf2015:{short:'NSF, 2015',group:'sleep_hours',org:'Hirshkowitz M. {etAl}, National Sleep Foundation',title:'National Sleep Foundation’s updated sleep duration recommendations: final report',where:'Sleep Health',year:'2015',url:'https://pubmed.ncbi.nlm.nih.gov/29073398/',checked:CHECKED}
 };
 
 // Таблица FRIEND: перцентили 5/10/25/50/75/90/95, мл/кг/мин, по десятилетиям возраста.
@@ -155,10 +155,10 @@ const FRIEND={
 function percentileBand(sex,age,value){
  if(!FRIEND[sex]||age==null||!Number.isFinite(age)||age<20||age>79||value==null||!Number.isFinite(value))return null;
  let row=FRIEND[sex][Math.min(70,Math.floor(age/10)*10)];
- if(value<row[0])return {label:'ниже 5-го перцентиля сверстников',low:null,high:PCT[0],src:['friend2015']};
+ if(value<row[0])return {label:t('pct.below',{p:PCT[0]}),low:null,high:PCT[0],src:['friend2015']};
  for(let i=0;i<row.length-1;i++) if(value<row[i+1])
-  return {label:`между ${PCT[i]}-м и ${PCT[i+1]}-м перцентилем сверстников`,low:PCT[i],high:PCT[i+1],src:['friend2015']};
- return {label:'95-й перцентиль сверстников и выше',low:PCT[6],high:null,src:['friend2015']};
+  return {label:t('pct.between',{a:PCT[i],b:PCT[i+1]}),low:PCT[i],high:PCT[i+1],src:['friend2015']};
+ return {label:t('pct.above',{p:PCT[6]}),low:PCT[6],high:null,src:['friend2015']};
 }
 
 const weeklyFromDaily=d=>d==null?null:d*7;
@@ -169,33 +169,33 @@ function bands(metric,age,sex){
  if(metric==='steps'){
   // Плато пользы зависит от возраста: до 60 лет 8–10 тыс., с 60 лет 6–8 тыс.
   let s=['paluch2022'],sm=['paluch2022','saintMaurice2020'];
-  let low={from:0,to:4000,label:'мало',tone:'watch',src:sm};
-  let rise=t=>({from:4000,to:t,label:'выигрыш растёт с каждой тысячей',tone:'neutral',src:sm});
-  let over=f=>({from:f,to:null,label:'дополнительной пользы для смертности не показано, вреда тоже',tone:'neutral',src:s});
+  let low={from:0,to:4000,label:t('zone.steps.low'),tone:'watch',src:sm};
+  let rise=to=>({from:4000,to:to,label:t('zone.steps.rise'),tone:'neutral',src:sm});
+  let over=f=>({from:f,to:null,label:t('zone.steps.over'),tone:'neutral',src:s});
   if(age==null)return [low,rise(6000),
-   {from:6000,to:8000,label:'плато пользы для 60 лет и старше',tone:'good',src:['paluch2022','lee2019']},
-   {from:8000,to:10000,label:'плато пользы до 60 лет',tone:'good',src:s},over(10000)];
+   {from:6000,to:8000,label:t('zone.steps.plateauOld'),tone:'good',src:['paluch2022','lee2019']},
+   {from:8000,to:10000,label:t('zone.steps.plateauYoung'),tone:'good',src:s},over(10000)];
   return age>=60
-   ?[low,rise(6000),{from:6000,to:8000,label:'плато пользы для вашего возраста',tone:'good',src:['paluch2022','lee2019']},over(8000)]
-   :[low,rise(8000),{from:8000,to:10000,label:'плато пользы для вашего возраста',tone:'good',src:s},over(10000)];
+   ?[low,rise(6000),{from:6000,to:8000,label:t('zone.steps.plateauYours'),tone:'good',src:['paluch2022','lee2019']},over(8000)]
+   :[low,rise(8000),{from:8000,to:10000,label:t('zone.steps.plateauYours'),tone:'good',src:s},over(10000)];
  }
  if(metric==='exercise_min'){ // линейка в минутах в неделю, не в минутах в день
   let s=['who2020','hhs2018'];
-  return [{from:0,to:150,label:'ниже рекомендации',tone:'watch',src:s},
-          {from:150,to:300,label:'в рекомендации',tone:'good',src:s},
-          {from:300,to:null,label:'выше рекомендации: дополнительная польза',tone:'good',src:['who2020']}];
+  return [{from:0,to:150,label:t('zone.ex.below'),tone:'watch',src:s},
+          {from:150,to:300,label:t('zone.ex.in'),tone:'good',src:s},
+          {from:300,to:null,label:t('zone.ex.above'),tone:'good',src:['who2020']}];
  }
  if(metric==='resting_hr'){
   let s=['nhlbi','aha2024'];
-  return [{from:30,to:60,label:'ниже 60: по определению брадикардия, но у тренированных это норма',tone:'neutral',src:s},
-          {from:60,to:100,label:'обычный диапазон покоя у взрослых: 60–100',tone:'good',src:s},
-          {from:100,to:140,label:'выше 100: в покое это тахикардия',tone:'watch',src:s}];
+  return [{from:30,to:60,label:t('zone.hr.low'),tone:'neutral',src:s},
+          {from:60,to:100,label:t('zone.hr.usual'),tone:'good',src:s},
+          {from:100,to:140,label:t('zone.hr.high'),tone:'watch',src:s}];
  }
  if(metric==='sleep_hours'){
   let top=age!=null&&age>=65?8:9,s=['aasm2015','nsf2015'];
-  return [{from:3,to:7,label:'меньше рекомендации',tone:'watch',src:s},
-          {from:7,to:top,label:'в рекомендации',tone:'good',src:s},
-          {from:top,to:12,label:'больше рекомендации: влияние не определено',tone:'neutral',src:['nsf2015']}];
+  return [{from:3,to:7,label:t('zone.sleep.below'),tone:'watch',src:s},
+          {from:7,to:top,label:t('zone.sleep.in'),tone:'good',src:s},
+          {from:top,to:12,label:t('zone.sleep.above'),tone:'neutral',src:['nsf2015']}];
  }
  if(metric==='vo2max'){
   // Без пола и возраста линейки нет: сравнивать не с чем. Это не сбой, а отсутствие данных.
@@ -203,7 +203,7 @@ function bands(metric,age,sex){
   let row=FRIEND[sex][Math.min(70,Math.floor(age/10)*10)];
   // Тон нейтральный по всей шкале: FRIEND описывает распределение, а не ставит порог.
   return row.map((v,i)=>({from:v,to:i<row.length-1?row[i+1]:null,
-   label:i<row.length-1?`между ${PCT[i]}-м и ${PCT[i+1]}-м перцентилем`:'95-й перцентиль и выше',
+   label:i<row.length-1?t('tick.between',{a:PCT[i],b:PCT[i+1]}):t('tick.above',{p:PCT[6]}),
    tone:'neutral',src:['friend2015']}));
  }
  return [];
@@ -220,76 +220,76 @@ function zone(metric,value,age,sex){
 
 // Советы, «когда к врачу» и оговорки. У совета и у порога обязателен src. Оговорка может
 // быть словами самой страницы про прибор — тогда стоит own, и на экране это так и написано.
-const OWN='наблюдение страницы о приборе, не норма и не источник';
+const OWN='norm.own';
 const NORMS={
- steps:{label:'Шаги',official:false,officialSrc:['paluch2022','saintMaurice2020','lee2019'],
-  officialNote:'Официальной нормы шагов нет ни у ВОЗ, ни у минздравов: ниже — наблюдательные исследования смертности.',
-  advice:[{text:'Любая активность лучше, чем никакой: выигрыш начинается задолго до «десяти тысяч».',src:['who2020','paluch2022']},
-          {text:'Наращивать постепенно — понемногу увеличивая частоту, продолжительность и интенсивность.',src:['who2020']},
-          {text:'Важен объём, а не темп: связь со смертностью держится за общее число шагов, не за скорость.',src:['saintMaurice2020']}],
+ steps:{label:'norm.steps.label',official:false,officialSrc:['paluch2022','saintMaurice2020','lee2019'],
+  officialNote:'norm.steps.official',
+  advice:[{text:'norm.steps.advice.1',src:['who2020','paluch2022']},
+          {text:'norm.steps.advice.2',src:['who2020']},
+          {text:'norm.steps.advice.3',src:['saintMaurice2020']}],
   doctor:[],
-  caveats:[{text:'Исследования наблюдательные: они показывают связь, а не причину. Шаги в них считали датчиком на поясе, а не часами.',src:['paluch2022','saintMaurice2020','lee2019']},
-           {text:'8 000 шагов против 4 000 — отношение рисков 0,49 (95% ДИ 0,44–0,55); 12 000 — 0,35 (0,28–0,45).',src:['saintMaurice2020']},
-           {text:'У пожилых женщин выигрыш выходил на плато около 7 500 шагов.',src:['lee2019']}]},
- exercise_min:{label:'Минуты упражнений',official:true,officialSrc:['who2020','hhs2018'],
-  officialNote:'Взрослым: 150–300 минут умеренной или 75–150 минут высокой нагрузки в неделю, плюс силовые не реже двух дней в неделю; с 65 лет — ещё и равновесие не реже трёх дней в неделю.',
-  advice:[{text:'Больше двигаться и меньше сидеть — засчитывается любая активность.',src:['hhs2018','who2020']},
-          {text:'При хронических болезнях стоит обсудить нагрузку с врачом.',src:['hhs2018']},
-          {text:'Силовые нагрузки — отдельная часть рекомендации, кардио их не заменяет.',src:['who2020','hhs2018']}],
+  caveats:[{text:'norm.steps.caveats.1',src:['paluch2022','saintMaurice2020','lee2019']},
+           {text:'norm.steps.caveats.2',src:['saintMaurice2020']},
+           {text:'norm.steps.caveats.3',src:['lee2019']}]},
+ exercise_min:{label:'norm.exercise_min.label',official:true,officialSrc:['who2020','hhs2018'],
+  officialNote:'norm.exercise_min.official',
+  advice:[{text:'norm.exercise_min.advice.1',src:['hhs2018','who2020']},
+          {text:'norm.exercise_min.advice.2',src:['hhs2018']},
+          {text:'norm.exercise_min.advice.3',src:['who2020','hhs2018']}],
   doctor:[],
-  caveats:[{text:'Кольцо «Упражнения» считает минуты на уровне быстрой ходьбы и выше. Оно не делит нагрузку на умеренную и высокую и не различает силовые, поэтому сравнение с рекомендацией здесь приблизительное.',own:OWN}]},
- resting_hr:{label:'Пульс покоя',official:true,officialSrc:['nhlbi','aha2024'],
-  officialNote:'У большинства взрослых пульс покоя 60–100 ударов в минуту: выше 100 в покое — тахикардия, ниже 60 — брадикардия.',
-  advice:[{text:'Само по себе число ниже 60 не проблема: так бывает у тренированных, во сне и на некоторых лекарствах, например бета-блокаторах.',src:['aha2024','mayo2025']},
-          {text:'Само по себе число выше 100 тоже может быть временным.',src:['aha2024']},
-          {text:'На пульс покоя влияют температура воздуха, эмоции и стресс, лекарства, вес, возраст, тренированность, сон и курение.',src:['aha2024','mayo2025']},
-          {text:'Важнее разового числа то, что происходит с ним годами: переход из категории ниже 70 в категорию выше 85 примерно за десять лет был связан с ростом риска (отношение рисков 1,9).',src:['nauman2011']}],
-  doctor:[{text:'Пульс покоя регулярно выше 100.',src:['mayo2025']},
-          {text:'Пульс покоя часто ниже 60, если вы не тренированный спортсмен, — особенно при обмороках, головокружении или одышке.',src:['mayo2025']},
-          {text:'Пульс стал заметно медленнее или быстрее обычного — сказать врачу.',src:['aha2024']},
-          {text:'Пульс внезапно очень высокий или очень низкий именно для вас, особенно вместе с болью в груди, одышкой, головокружением или обмороком, — вызвать скорую.',src:['aha2024']}],
-  caveats:[{text:'У очень тренированных людей пульс покоя бывает около 40.',src:['mayo2025']},
-           {text:'Носимые устройства показывают пульс покоя не всегда точно.',src:['mayo2025']},
-           {text:'У Apple это собственный алгоритм по фоновым замерам, а не клинический замер.',own:OWN},
-           {text:'Снижение пульса покоя выгоды в этом исследовании не показало, поэтому падение на странице окрашено нейтрально, а не как «хорошо».',src:['nauman2011']}]},
- vo2max:{label:'VO₂max',official:false,officialSrc:['friend2015'],
-  officialNote:'Нормы как таковой нет: есть таблица распределения по возрасту и полу, и место в ней называется перцентилем.',
-  advice:[{text:'Разница в 1 MET (3,5 мл/кг/мин) связана примерно с 13% разницы в риске смерти от всех причин.',src:['kodama2009']},
-          {text:'С возрастом показатель снижается примерно на 10% за десятилетие жизни, поэтому удержать значение — уже улучшение относительно сверстников.',src:['friend2015']}],
+  caveats:[{text:'norm.exercise_min.caveats.1',own:OWN}]},
+ resting_hr:{label:'norm.resting_hr.label',official:true,officialSrc:['nhlbi','aha2024'],
+  officialNote:'norm.resting_hr.official',
+  advice:[{text:'norm.resting_hr.advice.1',src:['aha2024','mayo2025']},
+          {text:'norm.resting_hr.advice.2',src:['aha2024']},
+          {text:'norm.resting_hr.advice.3',src:['aha2024','mayo2025']},
+          {text:'norm.resting_hr.advice.4',src:['nauman2011']}],
+  doctor:[{text:'norm.resting_hr.doctor.1',src:['mayo2025']},
+          {text:'norm.resting_hr.doctor.2',src:['mayo2025']},
+          {text:'norm.resting_hr.doctor.3',src:['aha2024']},
+          {text:'norm.resting_hr.doctor.4',src:['aha2024']}],
+  caveats:[{text:'norm.resting_hr.caveats.1',src:['mayo2025']},
+           {text:'norm.resting_hr.caveats.2',src:['mayo2025']},
+           {text:'norm.resting_hr.caveats.3',own:OWN},
+           {text:'norm.resting_hr.caveats.4',src:['nauman2011']}]},
+ vo2max:{label:'norm.vo2max.label',official:false,officialSrc:['friend2015'],
+  officialNote:'norm.vo2max.official',
+  advice:[{text:'norm.vo2max.advice.1',src:['kodama2009']},
+          {text:'norm.vo2max.advice.2',src:['friend2015']}],
   doctor:[],
-  caveats:[{text:'Оценка считается по субмаксимальной нагрузке и только на уличной ходьбе, беге и хайкинге: зал, велотренажёр и плавание в неё не попадают.',own:OWN},
-           {text:'Независимая проверка 2025 года показала занижение в среднем на 6,07 мл/кг/мин (95% ДИ 3,77–8,38); участников было всего 28.',src:['lambe2025']},
-           {text:'Бета-блокаторы искажают оценку.',own:OWN},
-           {text:'Собственная динамика надёжнее, чем место среди сверстников: систематический сдвиг оценки одинаков из года в год, а разница между годами — нет.',src:['lambe2025']}]},
- sleep_hours:{label:'Сон',official:true,officialSrc:['aasm2015','nsf2015'],
-  officialNote:'Взрослым 18–60 лет рекомендуют регулярно спать 7 часов и больше; по возрастным диапазонам — 7–9 часов для 18–64 лет и 7–8 часов для 65 лет и старше.',
-  advice:[{text:'Цель — попасть в диапазон, а не «чем больше, тем лучше».',src:['aasm2015','nsf2015']},
-          {text:'Регулярность важна не меньше длительности: рекомендация дана про обычную ночь, а не про среднее за месяц.',src:['aasm2015']}],
-  doctor:[{text:'Если сон беспокоит вас самих, а также если его регулярно слишком мало или слишком много.',src:['aasm2015']}],
-  caveats:[{text:'Записаны только ночи, когда часы были на руке. Нет записи — это не «не спал».',own:OWN},
-           {text:'Окна «полдень–полдень» включают дневной сон и не обязательно являются одной полной ночью.',own:OWN}]}
+  caveats:[{text:'norm.vo2max.caveats.1',own:OWN},
+           {text:'norm.vo2max.caveats.2',src:['lambe2025']},
+           {text:'norm.vo2max.caveats.3',own:OWN},
+           {text:'norm.vo2max.caveats.4',src:['lambe2025']}]},
+ sleep_hours:{label:'norm.sleep_hours.label',official:true,officialSrc:['aasm2015','nsf2015'],
+  officialNote:'norm.sleep_hours.official',
+  advice:[{text:'norm.sleep_hours.advice.1',src:['aasm2015','nsf2015']},
+          {text:'norm.sleep_hours.advice.2',src:['aasm2015']}],
+  doctor:[{text:'norm.sleep_hours.doctor.1',src:['aasm2015']}],
+  caveats:[{text:'norm.sleep_hours.caveats.1',own:OWN},
+           {text:'norm.sleep_hours.caveats.2',own:OWN}]}
 };
 
 // Нормы для часов тренировок стоят отдельно: там не «обычный день», а объём за год.
 const WORKOUT_NORM={
- moderate:{low:150,high:300,label:'умеренная нагрузка',src:['cdc2023','who2020']},
- vigorous:{low:75,high:150,label:'высокая нагрузка',src:['cdc2023','who2020']},
+ moderate:{low:150,high:300,label:'workout.moderate',src:['cdc2023','who2020']},
+ vigorous:{low:75,high:150,label:'workout.vigorous',src:['cdc2023','who2020']},
  // Ходьба и велосипед считаются умеренной нагрузкой, бег — высокой. Скоростей в архиве нет,
  // поэтому велосипед отнесён к умеренной, и на экране это сказано прямо.
  kind:{Walking:'moderate',Hiking:'moderate',Cycling:'moderate',Running:'vigorous',Swimming:'moderate'},
  // Сводить их в одно число нечем: коэффициента «1 минута высокой = 2 умеренной» на
  // странице CDC нет, а ВОЗ допускает «эквивалентное сочетание», но множителя не даёт.
- noSum:'Минуты умеренной и высокой нагрузки на этой странице не складываются: проверенного коэффициента пересчёта у нас нет.'
+ noSum:'workout.noSum'
 };
 
 // Рабочие пороги страницы. Первые три выбраны исполнителем и источника не имеют — так и
 // написано на экране. Два последних привязаны к опубликованным числам, но нормой не являются.
 const NOISE_NOTE={
- steps:{text:'300 шагов в день',src:[],own:'рабочий порог страницы, источника нет'},
- exercise_min:{text:'3 минуты в день',src:[],own:'рабочий порог страницы, источника нет'},
- sleep_hours:{text:'0,25 часа',src:[],own:'рабочий порог страницы, источника нет'},
- resting_hr:{text:'2 удара в минуту',src:['nauman2011'],own:'рабочий порог страницы; выбран заметно уже, чем шаг между категориями 70 и 85'},
- vo2max:{text:'2 мл/кг/мин',src:['lambe2025'],own:'рабочий порог страницы; выбран по порядку величины ошибки оценки'}
+ steps:{text:'noise.steps.text',src:[],own:'noise.own.plain'},
+ exercise_min:{text:'noise.exercise_min.text',src:[],own:'noise.own.plain'},
+ sleep_hours:{text:'noise.sleep_hours.text',src:[],own:'noise.own.plain'},
+ resting_hr:{text:'noise.resting_hr.text',src:['nauman2011'],own:'noise.own.hr'},
+ vo2max:{text:'noise.vo2max.text',src:['lambe2025'],own:'noise.own.vo2'}
 };
 
 // ——— Обложка ————————————————————————————————————————————————————————————————
@@ -317,38 +317,36 @@ function rankAmongYears(metric){let full=fullYears(metric);if(full.length<2)retu
  let base=full.at(-1),others=full.slice(0,-1);
  return {below:others.filter(y=>y.value<base.value).length,of:others.length}}
 
-const CHIP_LINE={vo2max:{up:'Выносливость выше, чем была',down:'Выносливость ниже, чем была',flat:'Выносливость держится ровно'},
- steps:{up:'Ходите больше, чем в начале архива',down:'Ходите меньше, чем в начале архива',flat:'Ходите примерно как в начале архива'},
- resting_hr:{up:'Пульс покоя не падает, а растёт',down:'Пульс покоя стал ниже',flat:'Пульс покоя держится ровно'}};
-const CHIP_TITLE={vo2max:'Форма',steps:'Повседневность',resting_hr:'Сердце'};
+const CHIP_LINE={vo2max:{up:'chip.vo2max.up',down:'chip.vo2max.down',flat:'chip.vo2max.flat'},
+ steps:{up:'chip.steps.up',down:'chip.steps.down',flat:'chip.steps.flat'},
+ resting_hr:{up:'chip.resting_hr.up',down:'chip.resting_hr.down',flat:'chip.resting_hr.flat'}};
+const CHIP_TITLE={vo2max:'chip.title.vo2max',steps:'chip.title.steps',resting_hr:'chip.title.resting_hr'};
 
 // Три чипа разного смысла, а не четыре одинаковые карточки: сначала фраза, число вторым слоем.
 function coverChips(){
  return ['vo2max','steps','resting_hr'].map(metric=>{
-  let h=storyHorizons(metric),base=h.base,first=h.first,dir=archDir(metric),title=CHIP_TITLE[metric];
-  if(!base||!dir)return {metric,title,line:'Записей пока слишком мало',num:'',tone:'neutral'};
+  let h=storyHorizons(metric),base=h.base,first=h.first,dir=archDir(metric),title=t(CHIP_TITLE[metric]);
+  if(!base||!dir)return {metric,title,line:t('chip.tooFew'),num:'',tone:'neutral'};
   let unit=unitFor(metric,base.value),num='';
   if(metric==='vo2max'){let r=rankAmongYears(metric),
    // «Выше, чем в 9 из 9» — формально верно и нечитаемо; когда выше всех, так и сказать.
-   place=!r||!r.of?'':r.below===r.of?'; выше всех прошлых полных лет':`; выше, чем в ${r.below} из ${r.of} прошлых полных лет`;
-   num=`${fmt(base.value,1)} ${unit} в ${base.year} году`+place;}
+   place=!r||!r.of?'':r.below===r.of?t('chip.aboveAll'):t('chip.aboveSome',{n:r.below,of:r.of});
+   num=t('chip.inYear',{value:fmt(base.value,1),unit:unit,year:base.year})+place;}
   else if(metric==='steps')
-   num=`${fmt(base.value,0)} ${unit} в ${base.year} году`+(first?` против ${fmt(first.value,0)} в ${first.year}`:'');
+   num=t('chip.inYear',{value:fmt(base.value,0),unit:unit,year:base.year})+(first?t('chip.against',{value:fmt(first.value,0),year:first.year}):'');
   else {let d=first?base.value-first.value:null;
-   num=d===null?`${fmt(base.value,0)} ${unit} в ${base.year} году`
-    :`${d>0?'+':'−'}${fmt(Math.abs(d),0)} ${unit} с ${first.year} года`;}
-  return {metric,title,line:CHIP_LINE[metric][dir],num,tone:toneOf(metric,dir)}})}
+   num=d===null?t('chip.inYear',{value:fmt(base.value,0),unit:unit,year:base.year})
+    :t('chip.since',{sign:d>0?'+':'−',value:fmt(Math.abs(d),0),unit:unit,year:first.year});}
+  return {metric,title,line:t(CHIP_LINE[metric][dir]),num,tone:toneOf(metric,dir)}})}
 
-const STORY_UNIT={steps:'шагов в день',exercise_min:'минут в день',resting_hr:'уд/мин',vo2max:'мл/кг/мин',sleep_hours:'ч в сутки'};
-function plural(v,a,b,c){let m=Math.abs(v)%100;if(m>=11&&m<=14)return c;m=m%10;
- return m===1?a:m>=2&&m<=4?b:c}
+const STORY_UNIT={steps:'sunit.steps',exercise_min:'sunit.exercise_min',resting_hr:'unit.bpm',vo2max:'unit.vo2',sleep_hours:'sunit.sleep_hours'};
 // Единица зависит от числа перед ней: «1 шаг», «3 шага», «983 шага». Там, где падежа нет
 // (уд/мин, мл/кг/мин, мин), стоит сокращение — оно не склоняется и не врёт.
 function unitFor(metric,v){
- if(metric==='steps')return plural(Math.round(v),'шаг','шага','шагов')+' в день';
- if(metric==='exercise_min')return 'мин в день';
- return STORY_UNIT[metric]}
-const TONE_WORD={good:'хорошо',watch:'обратить внимание',neutral:'нейтрально'};
+ if(metric==='steps')return t('sunit.stepsPerDay',{word:tPlural(Math.round(v),'plural.step')});
+ if(metric==='exercise_min')return t('unit.minPerDay');
+ return t(STORY_UNIT[metric])}
+const TONE_WORD={good:'tone.good',watch:'tone.watch',neutral:'tone.neutral'};
 
 // ——— Разметка обложки ————————————————————————————————————————————————————————
 function storyCover(){
@@ -358,19 +356,15 @@ function storyCover(){
    <div class="chip-title">${esc(c.title)}</div>
    <div class="chip-line">${esc(c.line)}</div>
    <div class="chip-num">${esc(c.num)}</div>
-   <div class="chip-tone">${esc(TONE_WORD[c.tone])}</div></div>`).join('')}</div>
-  <p class="chart-note">Статус в чипе назван словом, а не только цветом: страница не полагается на то, что цвет вообще различим.</p></section>`}
+   <div class="chip-tone">${esc(t(TONE_WORD[c.tone]))}</div></div>`).join('')}</div>
+  <p class="chart-note">${esc(t('cover.toneNote'))}</p></section>`}
 
 // Словарь из брифа: один раз, перед числами, и сворачивается, чтобы не мешать повторному чтению.
-const GLOSSARY=[['Шаги','сколько вы реально двигаетесь в обычный день, а не «спорт».'],
- ['Упражнения','сколько минут тело работало целенаправленно.'],
- ['Пульс покоя','насколько сердце напряжено, когда вы сидите спокойно. Ниже обычно лучше. Рост годами — не паника, а повод спросить врача и посмотреть стресс, сон, лекарства, болезни.'],
- ['VO₂max','грубо: насколько легко даётся нагрузка. Растёт — вы выносливее, чем были.'],
- ['Сон','часы в сутки в те дни, когда устройство записало сон. Нет записи не значит «не спал».']];
+const GLOSSARY=['steps','exercise_min','resting_hr','vo2max','sleep_hours'];
 function storyGlossary(){
- return `<section class="panel"><details class="glossary"><summary>Пять слов, которые дальше встретятся</summary>
-  <dl>${GLOSSARY.map(([t,d])=>`<dt>${esc(t)}</dt><dd>${esc(d)}</dd>`).join('')}</dl>
-  <p class="trust">Год — среднее только по дням с записью. Пустая клетка — «не измеряли», а не ноль. Охра — записей мало, среднее шаткое. Пропуск на графике — разрыв линии, а не ноль.</p>
+ return `<section class="panel"><details class="glossary"><summary>${esc(t('gloss.title'))}</summary>
+  <dl>${GLOSSARY.map(m=>`<dt>${esc(t('gloss.'+m))}</dt><dd>${esc(t('gloss.'+m+'.text'))}</dd>`).join('')}</dl>
+  <p class="trust">${esc(t('gloss.trust'))}</p>
  </details></section>`}
 
 // Год рождения и пол спрашиваются один раз, на стартовом экране. Здесь их полей нет:
@@ -383,17 +377,19 @@ function bindStory(){
 const DEC={steps:0,exercise_min:0,resting_hr:0,vo2max:1,sleep_hours:1};
 const SOURCE_NO=Object.fromEntries(Object.keys(SOURCES).map((k,i)=>[k,i+1]));
 // Сноска у нормы: короткое имя источника и номер, который ведёт якорем вниз страницы.
+// В полях источника служебные слова стоят метками: имена работ и организаций уже английские.
+const srcText=v=>String(v).replace(/\{(\w+)\}/g,(m,name)=>t('src.'+name));
 function refs(ids){if(!ids||!ids.length)return '';
  return `<span class="refs">${ids.map(id=>{let s=SOURCES[id];if(!s)return '';
-  return `<a class="ref" data-role="ref" href="#src-${esc(id)}">${esc(s.short)} [${SOURCE_NO[id]}]</a>`}).join('')}</span>`}
+  return `<a class="ref" data-role="ref" href="#src-${esc(id)}">${esc(srcText(s.short))} [${SOURCE_NO[id]}]</a>`}).join('')}</span>`}
 function noteOf(item){return item.src&&item.src.length?refs(item.src)
- :`<span class="own">${esc(item.own||'')}</span>`}
+ :`<span class="own">${esc(item.own?t(item.own):'')}</span>`}
 
 // Отметка деления на линейке. У VO₂max деления — это перцентили, а не миллилитры:
 // человеку важно место среди сверстников, а не абсолютная шкала прибора.
 function tickLabel(metric,v,age,sex){
  if(metric==='vo2max'){let row=(FRIEND[sex]||{})[Math.min(70,Math.floor((age||20)/10)*10)]||[],
-  i=row.indexOf(v);return i>=0?PCT[i]+'-й':''}
+  i=row.indexOf(v);return i>=0?t('tick.ordinal',{p:PCT[i]}):''}
  return fmt(v,metric==='sleep_hours'?0:0)}
 
 // Линейка: зоны, деления и отметка. Значение вне нарисованной шкалы упирается в край,
@@ -408,9 +404,9 @@ function ruler(metric,value,age,sex){
      zones=bs.map(b=>{let a=x(b.from),c=x(b.to===null?hi:b.to);
       return `<rect class="zone zone-${esc(b.tone)}" x="${a.toFixed(1)}" y="${bY}" width="${Math.max(0,c-a).toFixed(1)}" height="${bH}"><title>${esc(b.label)}</title></rect>`}).join(''),
      edges=[...new Set(bs.map(b=>b.from).concat(bs.at(-1).to===null?[]:[bs.at(-1).to]))],
-     ticks=edges.filter(v=>v>=lo&&v<=hi).map(v=>{let t=tickLabel(metric,v,age,sex);
+     ticks=edges.filter(v=>v>=lo&&v<=hi).map(v=>{let lab=tickLabel(metric,v,age,sex);
       return `<g><line class="rtick" x1="${x(v).toFixed(1)}" y1="${bY}" x2="${x(v).toFixed(1)}" y2="${bY+bH+5}"/>`+
-       (t?`<text class="raxis" x="${x(v).toFixed(1)}" y="${bY+bH+18}" text-anchor="middle">${esc(t)}</text>`:'')+`</g>`}).join(''),
+       (lab?`<text class="raxis" x="${x(v).toFixed(1)}" y="${bY+bH+18}" text-anchor="middle">${esc(lab)}</text>`:'')+`</g>`}).join(''),
      overlay=(RULER_MARKS[metric]||[]).filter(o=>o.v>lo&&o.v<hi).map(o=>
       `<line class="rmark" x1="${x(o.v).toFixed(1)}" y1="${bY}" x2="${x(o.v).toFixed(1)}" y2="${bY+bH}"/>`).join(''),
      mark='';
@@ -418,7 +414,7 @@ function ruler(metric,value,age,sex){
   mark=`<g><polygon data-role="mark" data-x="${mx.toFixed(1)}" class="mark" points="${(mx-6).toFixed(1)},${bY-11} ${(mx+6).toFixed(1)},${bY-11} ${mx.toFixed(1)},${(bY-1).toFixed(1)}"/>`+
    `<line class="markline" x1="${mx.toFixed(1)}" y1="${bY}" x2="${mx.toFixed(1)}" y2="${bY+bH}"/></g>`}
  let z=zone(metric,value,age,sex);
- return `<svg class="ruler" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc((value==null?'нет значения':'ваше значение '+fmt(value,DEC[metric]))+(z?', зона: '+z.label:''))}">`+
+ return `<svg class="ruler" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc((value==null?t('ruler.noValue'):t('ruler.yourValue',{value:fmt(value,DEC[metric])}))+(z?t('ruler.zone',{zone:z.label}):''))}">`+
   `<rect data-role="ruler" data-x0="${L}" data-x1="${W-R}" x="${L}" y="${bY}" width="${W-L-R}" height="${bH}" class="zone zone-empty"/>${zones}${overlay}${ticks}${mark}</svg>`}
 
 // Границы, которые рисуются поверх зон: клинические зоны отвечают на «это вообще норма?»,
@@ -426,31 +422,30 @@ function ruler(metric,value,age,sex){
 const RULER_MARKS={resting_hr:[{v:70},{v:85}]};
 // Категории Nauman: переход через границу вверх — то, с чем была связана разница в риске,
 // а не само по себе число в отдельно взятый год.
-function hrCategory(v){return v==null?null:v<70?{i:0,label:'ниже 70'}:v<=85?{i:1,label:'от 70 до 85'}:{i:2,label:'выше 85'}}
+function hrCategory(v){return v==null?null:v<70?{i:0,label:t('hr.below70')}:v<=85?{i:1,label:t('hr.70to85')}:{i:2,label:t('hr.above85')}}
 function hrShift(h){
  if(!h||!h.base||!h.first)return '';
  let a=hrCategory(h.first.value),b=hrCategory(h.base.value);
  if(!a||!b)return '';
- let text=a.i===b.i?`С ${h.first.year} года категория не менялась: ${a.label}.`
-  :a.i<b.i?`С ${h.first.year} года пульс покоя перешёл из категории «${a.label}» в «${b.label}». Именно такой переход вверх связывали с разницей в риске — не само число в отдельный год.`
-  :`С ${h.first.year} года пульс покоя перешёл из категории «${a.label}» в «${b.label}». Выгоды снижения это исследование не показало, поэтому переход вниз здесь окрашен нейтрально.`;
+ let vars={year:h.first.year,from:a.label,to:b.label},
+     text=a.i===b.i?t('hr.same',vars):t(a.i<b.i?'hr.up':'hr.down',vars);
  return `<p class="norm-shift">${esc(text)} ${refs(['nauman2011'])}</p>`}
 
 // Значение показателя для линейки: у упражнений шкала недельная, у остальных — как считали.
 function normReading(metric,base){
  if(!base||base.value==null)return null;
  if(metric==='exercise_min'){let wk=weeklyFromDaily(base.value);
-  return {ruler:wk,shown:`${fmt(base.value,0)} ${plural(Math.round(base.value),'минута','минуты','минут')} в день — это около ${fmt(wk,0)} ${plural(Math.round(wk),'минуты','минут','минут')} в неделю`}}
+  return {ruler:wk,shown:t('norms.minutesWeek',{day:fmt(base.value,0),dayWord:tPlural(Math.round(base.value),'plural.minute'),week:fmt(wk,0),weekWord:tPlural(Math.round(wk),'plural.minuteOf')})}}
  return {ruler:base.value,shown:`${fmt(base.value,DEC[metric])} ${unitFor(metric,base.value)}`}}
 
 function normBlock(metric){
  let norm=NORMS[metric],h=storyHorizons(metric),base=h.base||yearly(metric).filter(y=>y.value!==null).at(-1);
  if(!norm)return '';
- let title=norm.label;
+ let title=t(norm.label);
  if(!base||base.value==null)
   return `<div class="norm" data-role="norm"><h2>${esc(title)}</h2>
-   <p class="chart-note">Записей по этому показателю в архиве нет, поэтому сравнивать с нормой нечего.</p>
-   <p class="norm-official">${esc(norm.officialNote)} ${refs(norm.officialSrc)}</p></div>`;
+   <p class="chart-note">${esc(t('norms.noRecords'))}</p>
+   <p class="norm-official">${esc(t(norm.officialNote))} ${refs(norm.officialSrc)}</p></div>`;
  let age=ageInYear(base.year),sex=storySex(),read=normReading(metric,base),
      z=zone(metric,read.ruler,age,sex),bar=ruler(metric,read.ruler,age,sex),
      pct=metric==='vo2max'?percentileBand(sex,age,read.ruler):null,
@@ -458,21 +453,21 @@ function normBlock(metric){
  // У сна и VO₂max тон берётся от попадания в диапазон, а не от направления: «больше» там не значит «лучше».
  if(metric!=='sleep_hours'&&metric!=='vo2max'&&dir)tone=z?z.tone:toneOf(metric,dir);
  let verdict=metric==='vo2max'
-  ?(pct?`Ваш уровень — ${pct.label}.`:'Категорию можно показать только вместе с годом рождения и полом: таблица задана по возрасту и полу.')
-  :(z?`Ваше значение попадает в зону «${z.label}».`:'Зону показать не с чем.');
+  ?(pct?t('norms.yourLevel',{label:pct.label}):t('norms.noCategory'))
+  :(z?t('norms.yourZone',{zone:z.label}):t('norms.noZone'));
  return `<div class="norm tone-${esc(tone)}" data-role="norm">
   <div class="norm-head"><h2>${esc(title)}</h2>
-   <div class="norm-value">${esc(read.shown)} · ${esc(base.year)} год${base.status==='sparse'?' · записей мало, среднее шаткое':''}</div></div>
-  <p class="norm-official">${esc(norm.officialNote)} ${refs(norm.officialSrc)}</p>
-  ${bar||`<p class="chart-note">Линейка не нарисована: не с чем сравнивать.</p>`}
-  ${metric==='resting_hr'&&bar?`<p class="chart-note">Пунктир на линейке — границы 70 и 85 ударов в минуту: переход через них за годы связывали с разницей в риске. ${refs(['nauman2011'])}</p>`:''}
-  <p class="norm-verdict">${esc(verdict)} ${z?refs(z.src):''} <span class="tone-word">${esc(TONE_WORD[tone])}</span></p>
+   <div class="norm-value">${esc(read.shown)} · ${esc(t('norms.year',{year:base.year}))}${base.status==='sparse'?' · '+esc(t('norms.sparseBase')):''}</div></div>
+  <p class="norm-official">${esc(t(norm.officialNote))} ${refs(norm.officialSrc)}</p>
+  ${bar||`<p class="chart-note">${esc(t('norms.noRuler'))}</p>`}
+  ${metric==='resting_hr'&&bar?`<p class="chart-note">${esc(t('norms.hrDashes'))} ${refs(['nauman2011'])}</p>`:''}
+  <p class="norm-verdict">${esc(verdict)} ${z?refs(z.src):''} <span class="tone-word">${esc(t(TONE_WORD[tone]))}</span></p>
   ${metric==='resting_hr'?hrShift(h):''}
-  <ul class="advice">${norm.advice.slice(0,3).map(a=>`<li>${esc(a.text)} ${noteOf(a)}</li>`).join('')}</ul>
-  ${norm.doctor.length?`<div class="doctor"><b>Когда стоит показаться врачу</b><ul>${norm.doctor.map(d=>`<li>${esc(d.text)} ${noteOf(d)}</li>`).join('')}</ul></div>`
-   :`<div class="doctor"><b>Когда стоит показаться врачу</b><p>Отдельных поводов именно по этому показателю источники не называют.</p></div>`}
-  <ul class="caveats">${norm.caveats.map(c=>`<li>${esc(c.text)} ${noteOf(c)}</li>`).join('')}</ul>
-  <p class="disclaimer">Нормы популяционные: они описаны для групп людей, а не для вас лично. Страница не ставит диагноз и не заменяет врача; при симптомах идти к врачу, а не к графику.</p>
+  <ul class="advice">${norm.advice.slice(0,3).map(a=>`<li>${esc(t(a.text))} ${noteOf(a)}</li>`).join('')}</ul>
+  ${norm.doctor.length?`<div class="doctor"><b>${esc(t('norms.doctor'))}</b><ul>${norm.doctor.map(d=>`<li>${esc(t(d.text))} ${noteOf(d)}</li>`).join('')}</ul></div>`
+   :`<div class="doctor"><b>${esc(t('norms.doctor'))}</b><p>${esc(t('norms.noDoctor'))}</p></div>`}
+  <ul class="caveats">${norm.caveats.map(c=>`<li>${esc(t(c.text))} ${noteOf(c)}</li>`).join('')}</ul>
+  <p class="disclaimer">${esc(t('norms.disclaimer'))}</p>
  </div>`}
 
 // Часть норм задана по возрасту и полу. Спрашиваются они на стартовом экране, а страница
@@ -480,13 +475,13 @@ function normBlock(metric){
 // а не молчаливым пропуском строки.
 function storyWhoNote(){
  let sex=storySex(),by=state.birthYear;
- if(sex&&by)return `<p class="story-who" data-role="story-who">Нормы, заданные по возрасту и полу, сопоставлены для: год рождения ${esc(by)}, ${sex==='m'?'мужской':'женский'} пол. Эти два поля вводятся на стартовом экране и нигде не сохраняются.</p>`;
- return `<p class="story-who" data-role="story-who">Год рождения и пол не заданы, поэтому нормы VO₂max и сна здесь не с чем сопоставить: они описаны по возрасту, а VO₂max ещё и по полу. Остальное на странице от них не зависит. Указать их можно на стартовом экране: нажмите «Сбросить» и откройте архив заново, поля запомнятся. Страница, собранная сразу с данными, стартового экрана не показывает.</p>`}
+ if(sex&&by)return `<p class="story-who" data-role="story-who">${esc(t('who.known',{year:by,sex:sex==='m'?t('who.male'):t('who.female')}))}</p>`;
+ return `<p class="story-who" data-role="story-who">${esc(t('who.unknown'))}</p>`}
 
 function storyNorms(){
  let list=STORY_METRICS.filter(m=>NORMS[m]);
- return `<section class="panel"><h1>Ваши числа и нормы</h1>
-  <p class="chart-note">Сравнение идёт по последнему полному году архива. Возле каждого порога и каждого совета стоит номер источника: он ведёт в список внизу страницы.</p>
+ return `<section class="panel"><h1>${esc(t('norms.title'))}</h1>
+  <p class="chart-note">${esc(t('norms.note'))}</p>
   ${storyWhoNote()}
   ${list.map(normBlock).join('')}</section>`}
 
@@ -499,11 +494,11 @@ function deltaCell(metric,cmp){
  // измеренный ноль, хотя это всего лишь «меньше порога заметности».
  // Печатать саму дельту здесь нечестно вдвойне: округлённый ноль читается как измеренный,
  // да ещё и со знаком («−0,0»). Полезнее назвать порог, ниже которого страница молчит.
- if(cmp.dir==='flat'){let t=NOISE[metric]??0;
-  return `<td><div class="delta">почти так же</div>`+
-   `<div class="delta-word">разница меньше ${esc(fmt(t,t<1?2:0))} ${esc(unitFor(metric,t))}</div></td>`}
+ if(cmp.dir==='flat'){let eps=NOISE[metric]??0;
+  return `<td><div class="delta">${esc(t('change.almostSame'))}</div>`+
+   `<div class="delta-word">${esc(t('change.underThreshold',{value:fmt(eps,eps<1?2:0),unit:unitFor(metric,eps)}))}</div></td>`}
  return `<td class="tone-${esc(cmp.tone)}"><div class="delta">${esc(num)}</div>`+
-  `<div class="delta-word">${cmp.dir==='up'?'больше':'меньше'} · ${esc(TONE_WORD[cmp.tone])}</div></td>`}
+  `<div class="delta-word">${esc(cmp.dir==='up'?t('change.more'):t('change.less'))} · ${esc(t(TONE_WORD[cmp.tone]))}</div></td>`}
 
 // Одна строка перед сравнением: можно ли верить году, по которому оно идёт. Судья — шаги:
 // они пишутся каждый день, и по ним видно, носили ли прибор. Остальные ряды называются
@@ -512,64 +507,64 @@ function yearTrust(){
  let year=lastCompleteYear();if(!year)return null;
  let judge=['steps','exercise_min'].map(m=>({m,y:yearly(m).find(z=>z.year===year)})).find(x=>x.y&&x.y.value!==null);
  if(!judge)return null;
- let {m,y}=judge,shaky=STORY_METRICS.filter(k=>k!==m&&yearStatus(k,year)==='sparse').map(k=>NORMS[k].label.toLowerCase()),
-     days=`${NORMS[m].label.toLowerCase()} записаны ${fmt(y.observedDays,0)} ${plural(y.observedDays,'день','дня','дней')} из ${fmt(y.calendarDays,0)}`,
+ let {m,y}=judge,shaky=STORY_METRICS.filter(x=>x!==m&&yearStatus(x,year)==='sparse').map(x=>t(NORMS[x].label).toLowerCase()),
+     days=t('trust.days',{what:t(NORMS[m].label).toLowerCase(),n:fmt(y.observedDays,0),word:tPlural(y.observedDays,'plural.day'),of:fmt(y.calendarDays,0)}),
      ok=y.status==='full';
  return {year,ok,shaky,text:ok
-  ?`${year} год: ${days} — этому году можно верить.${shaky.length?` Шаткие в нём только ${shaky.join(', ')}: записей меньше 80% дней.`:''}`
-  :`${year} год: ${days}, меньше 80% — этому году верить нельзя, среднее по нему шаткое.`}}
-function yearTrustLine(){let t=yearTrust();
- return t?`<p class="trust year-trust tone-${t.ok?'good':'watch'}" data-role="year-trust">${esc(t.text)}</p>`:''}
+  ?t('trust.ok',{year:year,days:days})+(shaky.length?' '+t('trust.shaky',{list:shaky.join(', ')}):'')
+  :t('trust.bad',{year:year,days:days})}}
+function yearTrustLine(){let tr=yearTrust();
+ return tr?`<p class="trust year-trust tone-${tr.ok?'good':'watch'}" data-role="year-trust">${esc(tr.text)}</p>`:''}
 
 function storyChange(){
  let data=STORY_METRICS.map(m=>({m,h:storyHorizons(m)})).filter(x=>x.h.base),
      parts=STORY_METRICS.map(m=>({m,p:storyHorizons(m).partial})).filter(x=>x.p),
      py=parts.length?parts[0].p:null;
- if(!data.length)return `<section class="panel"><h1>Было и стало</h1>
-  <p class="chart-note">Полных лет в архиве пока нет, поэтому сравнивать не с чем.</p></section>`;
- return `<section class="panel"><h1>Было и стало</h1>
+ if(!data.length)return `<section class="panel"><h1>${esc(t('change.title'))}</h1>
+  <p class="chart-note">${esc(t('change.noFullYears'))}</p></section>`;
+ return `<section class="panel"><h1>${esc(t('change.title'))}</h1>
   ${yearTrustLine()}
-  <p class="chart-note">Три горизонта сразу: прошлый год, начало архива и «ваш обычный год» — медиана всех полных лет. Один горизонт всегда врёт: год к году зависит от случайностей, а начало архива — от того, когда вы купили часы.</p>
-  <div class="tablewrap"><table class="change"><thead><tr><th>Показатель</th><th>Последний полный год</th><th>Против прошлого года</th><th>Против первого полного года</th><th>Против обычного года</th></tr></thead><tbody>
-  ${data.map(({m,h})=>`<tr><th scope="row">${esc(NORMS[m].label)}${h.sparseBasis?'<div class="sparse-flag">во все годы записей мало: сравнение шаткое</div>':''}</th>
-   <td><div class="delta">${esc(fmt(h.base.value,DEC[m]))} ${esc(unitFor(m,h.base.value))}</div><div class="delta-word">${esc(h.base.year)} год</div></td>
+  <p class="chart-note">${esc(t('change.horizons'))}</p>
+  <div class="tablewrap"><table class="change"><thead><tr><th>${esc(t('change.col.metric'))}</th><th>${esc(t('change.col.last'))}</th><th>${esc(t('change.col.prev'))}</th><th>${esc(t('change.col.first'))}</th><th>${esc(t('change.col.median'))}</th></tr></thead><tbody>
+  ${data.map(({m,h})=>`<tr><th scope="row">${esc(t(NORMS[m].label))}${h.sparseBasis?'<div class="sparse-flag">'+esc(t('change.sparseAll'))+'</div>':''}</th>
+   <td><div class="delta">${esc(fmt(h.base.value,DEC[m]))} ${esc(unitFor(m,h.base.value))}</div><div class="delta-word">${esc(t('norms.year',{year:h.base.year}))}</div></td>
    ${deltaCell(m,h.prev)}${deltaCell(m,h.first)}${deltaCell(m,h.median)}</tr>`).join('')}
   </tbody></table></div>
-  ${py?`<div class="partial"><b>${esc(py.year)}: год ещё идёт</b> — в архиве ${esc(py.archiveMonths)} ${esc(plural(py.archiveMonths,'месяц','месяца','месяцев'))} из 12. Поэтому в таблице выше его нет: сравнивать обрезанный год с полным нечестно, особенно по суммам вроде часов тренировок.
-   <ul>${parts.map(({m,p})=>`<li>${esc(NORMS[m].label)}: ${esc(fmt(p.value,DEC[m]))} ${esc(unitFor(m,p.value))}</li>`).join('')}</ul></div>`:''}
+  ${py?`<div class="partial"><b>${esc(t('change.running',{year:py.year}))}</b> ${esc(t('change.runningNote',{n:py.archiveMonths,word:tPlural(py.archiveMonths,'plural.month')}))}
+   <ul>${parts.map(({m,p})=>`<li>${esc(t(NORMS[m].label))}: ${esc(fmt(p.value,DEC[m]))} ${esc(unitFor(m,p.value))}</li>`).join('')}</ul></div>`:''}
  </section>`}
 
 // ——— Источники ———————————————————————————————————————————————————————————————
-const GROUP_TITLE={steps:'Шаги',exercise_min:'Минуты упражнений',workouts:'Часы тренировок',
- resting_hr:'Пульс покоя',vo2max:'VO₂max',sleep_hours:'Сон'};
+const GROUP_TITLE={steps:'norm.steps.label',exercise_min:'norm.exercise_min.label',workouts:'group.workouts',
+ resting_hr:'norm.resting_hr.label',vo2max:'norm.vo2max.label',sleep_hours:'norm.sleep_hours.label'};
 // Точку ставит тот, у кого её ещё нет: «Paluch и соавт.» уже кончается точкой,
 // и в списке источников выходило «Paluch и соавт..».
-const endDot=t=>String(t).endsWith('.')?'':'.';
+const endDot=x=>String(x).endsWith('.')?'':'.';
 function storySources(){
  let groups={};
  for(const [id,s] of Object.entries(SOURCES))(groups[s.group]??=[]).push([id,s]);
- return `<section class="panel sources"><h1>Источники</h1>
-  <p class="chart-note">Номер в квадратных скобках рядом с нормой ведёт сюда. Адрес напечатан полностью: страница сама в сеть не ходит, переход делает человек, и ссылка должна читаться даже на бумаге.</p>
-  ${Object.keys(GROUP_TITLE).filter(g=>groups[g]).map(g=>`<h2>${esc(GROUP_TITLE[g])}</h2>
+ return `<section class="panel sources"><h1>${esc(t('src.title'))}</h1>
+  <p class="chart-note">${esc(t('src.note'))}</p>
+  ${Object.keys(GROUP_TITLE).filter(g=>groups[g]).map(g=>`<h2>${esc(t(GROUP_TITLE[g]))}</h2>
    <ol class="srclist">${groups[g].map(([id,s])=>`<li id="src-${esc(id)}" value="${SOURCE_NO[id]}">
-    <b>${esc(s.org)}</b>${endDot(s.org)} ${esc(s.title)}${endDot(s.title)}${s.where?' '+esc(s.where)+endDot(s.where):''} ${esc(s.year)}.
+    <b>${esc(srcText(s.org))}</b>${endDot(srcText(s.org))} ${esc(s.title)}${endDot(s.title)}${s.where?' '+esc(s.where)+endDot(s.where):''} ${esc(srcText(s.year))}.
     <a href="${esc(s.url)}" rel="noopener noreferrer" target="_blank">${esc(s.url)}</a>
-    <span class="checked">сверено ${esc(s.checked)}</span></li>`).join('')}</ol>`).join('')}
-  <h2>Рабочие пороги страницы, не нормы</h2>
-  <p class="chart-note">Ниже этих величин страница говорит «почти не изменилось». Это её собственное решение, а не чья-то рекомендация: так дрожание оценки не называется направлением.</p>
-  <ul class="srcnote">${Object.entries(NOISE_NOTE).map(([m,x])=>`<li><b>${esc((NORMS[m]||{}).label||m)}</b>: ${esc(x.text)} — ${esc(x.own)}${x.src.length?' '+refs(x.src):''}</li>`).join('')}</ul>
-  <p class="disclaimer">Нормы на этой странице популяционные: они описывают группы людей, а не вас лично, и не заменяют врача. Страница не ставит диагноз.</p>
-  <p class="disclaimer">Для шагов официальной нормы нет ни у ВОЗ, ни у национальных минздравов: приведены наблюдательные исследования смертности, которые показывают связь, а не причину.</p>
+    <span class="checked">${esc(t('src.checked',{date:s.checked}))}</span></li>`).join('')}</ol>`).join('')}
+  <h2>${esc(t('noise.title'))}</h2>
+  <p class="chart-note">${esc(t('noise.note'))}</p>
+  <ul class="srcnote">${Object.entries(NOISE_NOTE).map(([m,x])=>`<li><b>${esc(NORMS[m]?t(NORMS[m].label):m)}</b>: ${esc(t(x.text))} — ${esc(t(x.own))}${x.src.length?' '+refs(x.src):''}</li>`).join('')}</ul>
+  <p class="disclaimer">${esc(t('src.disclaimer'))}</p>
+  <p class="disclaimer">${esc(t('src.stepsNoNorm'))}</p>
  </section>`}
 
 // ——— График, факты, стена лет, часы спорта —————————————————————————————————
 // Тренд по редким годам считается так же, как горизонты: лучше сказать «на шатких данных»,
 // чем не сказать ничего.
 function storyTrend(metric){
- let t=trendVerdict(metric);
- if(t.verdict!=='данных мало')return t;
+ let tr=trendVerdict(metric);
+ if(tr.verdict!=='few')return tr;
  let s=trendVerdict(metric,true);
- if(s.verdict!=='данных мало')s.sparseBasis=true;
+ if(s.verdict!=='few')s.sparseBasis=true;
  return s}
 
 function storyMetricNow(){
@@ -590,9 +585,8 @@ function seasonNote(metric){
      su=bucket([6,7,8]),wi=bucket([12,1,2]);
  if(su==null||wi==null)return null;
  let d=su-wi;
- if(Math.abs(d)<(NOISE[metric]??0))return 'Лето и зима здесь почти не отличаются: сезонной волны у этого показателя не видно.';
- return d>0?'Линия качается каждый год: летом выше, зимой ниже. Это сезон, а не срыв.'
-           :'Линия качается каждый год: зимой выше, летом ниже. Это сезон, а не срыв.'}
+ if(Math.abs(d)<(NOISE[metric]??0))return t('season.none');
+ return d>0?t('season.summerUp'):t('season.winterUp')}
 
 function chartNotes(metric){
  let all=yearly(metric),got=all.filter(y=>y.value!==null),notes=[];
@@ -601,33 +595,33 @@ function chartNotes(metric){
  // двенадцати — это не рекорд, а обрезанная выборка.
  let ranked=got.filter(y=>y.status!=='partial');
  if(ranked.length>1){let lo=ranked.reduce((a,b)=>b.value<a.value?b:a),hi=ranked.reduce((a,b)=>b.value>a.value?b:a);
-  notes.push(`Меньше всего — в ${lo.year} году, больше всего — в ${hi.year}.`)}
+  notes.push(t('note.lowHigh',{low:lo.year,high:hi.year}))}
  let sparse=all.filter(y=>y.status==='sparse');
- if(sparse.length)notes.push(`Записей мало в ${sparse.map(y=>y.year).join(', ')} ${plural(sparse.length,'году','годах','годах')}: средние за них шаткие, и в выводах это учтено.`);
+ if(sparse.length)notes.push(t('note.sparseYears',{years:sparse.map(y=>y.year).join(', '),word:tPlural(sparse.length,'plural.yearIn')}));
  let part=all.find(y=>y.status==='partial');
- if(part)notes.push(`${part.year} ещё идёт: правый край линии — обрезанный год, а не падение.`);
+ if(part)notes.push(t('note.partial',{year:part.year}));
  let first=got[0],firstArch=storyYears()[0];
  if(first&&firstArch&&Number(first.year)>Number(firstArch))
-  notes.push(`Записи по этому показателю начинаются с ${first.year} года: раньше прибор его не писал, и пустоту слева нулями не заполняют.`);
+  notes.push(t('note.startsAt',{year:first.year}));
  return notes.slice(0,5)}
 
 function storyChart(){
  let {cur,opts}=storyMetricNow();
- if(!opts.length)return `<section class="panel"><h1>Один большой ряд</h1>
-  <p class="chart-note">Показателей с записями в архиве нет.</p></section>`;
+ if(!opts.length)return `<section class="panel"><h1>${esc(t('bigrow.title'))}</h1>
+  <p class="chart-note">${esc(t('bigrow.none'))}</p></section>`;
  // По вертикали — среднее на день с записью, а не сумма за месяц. Иначе февраль всегда
  // ниже января, а месяц с пропусками читается как спад. Так же считается весь раздел.
  let isSum=expectedAgg(cur)==='sum',
      rows=storyRows(cur).filter(r=>safeDate(r.month)).map(r=>
       r.value===null||!(n(r.observed_days)>0)?{...r,value:null}
       :isSum?{...r,value:n(r.value)/n(r.observed_days)}:r),
-     lbl=NORMS[cur]?NORMS[cur].label:cur;
- return `<section class="panel"><div class="sectionhead"><h1>Один большой ряд</h1></div>
-  <div class="chipbar">${opts.map(m=>`<button class="mchip${m===cur?' active':''}" data-ui="storyMetric" data-metric="${esc(m)}" aria-pressed="${m===cur}">${esc(NORMS[m]?NORMS[m].label:m)}</button>`).join('')}</div>
-  ${chart(rows,lbl,STORY_UNIT[cur]||'',{key:'story',metric:cur})}
-  <p class="chart-note">По вертикали — ${esc(STORY_UNIT[cur]||'значение')}, среднее по дням с записью, а не сумма за месяц: иначе короткий февраль и месяц с пропусками читались бы как спад. Весь ряд помещается в ширину страницы: подписаны не все месяцы, но ни один не обрезан и прокручивать вбок нечего.</p>
-  <ul class="notes">${chartNotes(cur).map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
-  <p class="chart-note">Точка отсутствует там, где записи нет: линия рвётся, а не падает в ноль.</p></section>`}
+     lbl=NORMS[cur]?t(NORMS[cur].label):cur;
+ return `<section class="panel"><div class="sectionhead"><h1>${esc(t('bigrow.title'))}</h1></div>
+  <div class="chipbar">${opts.map(m=>`<button class="mchip${m===cur?' active':''}" data-ui="storyMetric" data-metric="${esc(m)}" aria-pressed="${m===cur}">${esc(NORMS[m]?t(NORMS[m].label):m)}</button>`).join('')}</div>
+  ${chart(rows,lbl,STORY_UNIT[cur]?t(STORY_UNIT[cur]):'',{key:'story',metric:cur})}
+  <p class="chart-note">${esc(t('bigrow.axisNote',{unit:STORY_UNIT[cur]?t(STORY_UNIT[cur]):t('bigrow.value')}))}</p>
+  <ul class="notes">${chartNotes(cur).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+  <p class="chart-note">${esc(t('bigrow.gapNote'))}</p></section>`}
 
 // ——— Интересно ———————————————————————————————————————————————————————————————
 // Слово «лучший» здесь не употребляется: это раннее решение заказчика, и оно осталось в силе
@@ -635,15 +629,15 @@ function storyChart(){
 function storyFactList(){
  let out=[],st=yearly('steps').filter(y=>y.value!==null&&y.status!=='partial');
  if(st.length>1){let lo=st.reduce((a,b)=>b.value<a.value?b:a),hi=st.reduce((a,b)=>b.value>a.value?b:a);
-  out.push(`Самый тихий по движению год — ${lo.year}; самый насыщенный — ${hi.year}.`)}
+  out.push(t('fact.quietBusy',{quiet:lo.year,busy:hi.year}))}
  if(st.length>2){let best=1,run=1,from=st[0].year,bestFrom=st[0].year;
   for(let i=1;i<st.length;i++){
    if(st[i].value-st[i-1].value>-(NOISE.steps)){run++;if(run>best){best=run;bestFrom=from}}
    else{run=1;from=st[i].year}}
-  if(best>=3)out.push(`Самая длинная череда лет без снижения шагов — ${best} ${plural(best,'год','года','лет')} подряд, начиная с ${bestFrom}.`)}
+  if(best>=3)out.push(t('fact.streak',{n:best,word:tPlural(best,'plural.year'),from:bestFrom}))}
  let late=lateStarters();
  if(late.length){let m=late[0],f=firstYearWithData(m),e=storyYears()[0];
-  out.push(`${NORMS[m]?NORMS[m].label:m} начали записывать на ${Number(f)-Number(e)} ${plural(Number(f)-Number(e),'год','года','лет')} позже остального, поэтому «жизнь до и после» для него не сравнить.`)}
+  out.push(t('fact.lateStart',{what:NORMS[m]?t(NORMS[m].label):m,n:Number(f)-Number(e),word:tPlural(Number(f)-Number(e),'plural.year')}))}
  // Год, где один показатель просел, а другой нет: это и есть «2020 сломал только упражнения».
  outer: for(const year of storyYears()){
   for(const a of STORY_METRICS)for(const b of STORY_METRICS){
@@ -656,23 +650,23 @@ function storyFactList(){
    if(ya[ia].status==='partial'||yb[ib].status==='partial')continue;
    let da=ya[ia].value-pa.value,db=yb[ib].value-pb.value;
    if(da<-NOISE[a]&&Math.abs(db)<NOISE[b]){
-    out.push(`${year} год задел не всё: ${(NORMS[a].label).toLowerCase()} заметно просели, а ${(NORMS[b].label).toLowerCase()} почти не изменились.`);
+    out.push(t('fact.unevenYear',{year:year,fell:t(NORMS[a].label).toLowerCase(),held:t(NORMS[b].label).toLowerCase()}));
     break outer}}}
  let dv=archDir('vo2max'),dh=archDir('resting_hr');
  if(dv&&dh){
-  if(dv==='up'&&dh==='up')out.push('Выносливость и пульс покоя разошлись: первая выше, чем была, но и второй выше. Это разные полюса, и усреднять их в один «индекс здоровья» нечем.');
-  else if(dv==='up'&&dh==='down')out.push('Выносливость выше, а пульс покоя ниже: оба сигнала смотрят в одну сторону.');
-  else if(dv==='down'&&dh==='up')out.push('Выносливость ниже, а пульс покоя выше: оба сигнала смотрят в одну сторону.');}
+  if(dv==='up'&&dh==='up')out.push(t('fact.bothUp'));
+  else if(dv==='up'&&dh==='down')out.push(t('fact.agreeGood'));
+  else if(dv==='down'&&dh==='up')out.push(t('fact.agreeWatch'));}
  // Перевод числа в образ. Коэффициент приблизительный, и на экране он назван.
  let total=yearly('steps').reduce((s,y)=>s+(y.total||0),0);
- if(total>0)out.push(`Если считать шаг за 0,75 метра — коэффициент приблизительный, у каждого он свой, — за всё время в архиве набралось около ${fmt(total*0.75/1000,0)} км.`);
+ if(total>0)out.push(t('fact.kilometres',{km:fmt(total*0.75/1000,0)}));
  return out.slice(0,5)}
 
 function storyFacts(){
  let f=storyFactList();
  if(!f.length)return '';
- return `<section class="panel"><h1>Интересно</h1>
-  <ul class="facts">${f.map(t=>`<li data-role="fact">${esc(t)}</li>`).join('')}</ul></section>`}
+ return `<section class="panel"><h1>${esc(t('facts.title'))}</h1>
+  <ul class="facts">${f.map(x=>`<li data-role="fact">${esc(x)}</li>`).join('')}</ul></section>`}
 
 // ——— Стена лет ———————————————————————————————————————————————————————————————
 // Шкала общая внутри строки: видно, как год стоит относительно других ваших лет, а не
@@ -696,20 +690,20 @@ function wallCells(years,unit,fromZero){
   anchor:anchors.has(y.year),
   tone:y.status==='sparse'?'watch':'neutral',
   pct:y.value===null?null:(fromZero?Math.max(1,(y.value-lo)/span*100):12+(y.value-lo)/span*88),
-  title:y.value===null?`${y.year}: нет записей`
-   :`${y.year}: ${fmt(y.value,2)} ${unit}${y.status==='sparse'?' · записей мало':''}${y.status==='partial'?' · год ещё идёт':''}`}))}
+  title:y.value===null?t('wall.cellNone',{year:y.year})
+   :t('wall.cell',{year:y.year,value:fmt(y.value,2),unit:unit})+(y.status==='sparse'?' · '+t('status.sparse'):'')+(y.status==='partial'?' · '+t('status.partial'):'')}))}
 
 function storyWall(){
  let list=STORY_METRICS.filter(m=>storyRows(m).some(r=>r.value!==null));
  if(!list.length)return '';
- return `<section class="panel" data-role="wall"><h1>Я в каждом году</h1>
-  <p class="chart-note">Каждая клетка — один год. Высота столбика показывает место года между самым низким и самым высоким годом ЭТОЙ строки, поэтому строки между собой не сравниваются. Охра — записей мало, среднее шаткое. Пустая клетка — прибор тогда не писал, это не ноль. Заштрихованный столбик — год, который ещё идёт. Рамкой отмечены первый и последний полные годы.</p>
+ return `<section class="panel" data-role="wall"><h1>${esc(t('wall.title'))}</h1>
+  <p class="chart-note">${esc(t('wall.note'))}</p>
   <div class="wall">${list.map(m=>{
-   let ys=yearly(m),t=storyTrend(m),
+   let ys=yearly(m),tr=storyTrend(m),
        gaps=ys.filter(y=>y.status==='none').map(y=>y.year),
-       note=gaps.length?`нет записей: ${gaps.length>2?gaps[0]+'—'+gaps.at(-1):gaps.join(', ')}`:'';
-   return wallRow(NORMS[m].label,t.verdict+(t.sparseBasis?' (на шатких данных)':''),t.tone,
-    wallCells(ys,(known[m]||[])[1]||''),note)}).join('')}</div>
+       note=gaps.length?t('wall.noRecords',{years:gaps.length>2?gaps[0]+'—'+gaps.at(-1):gaps.join(', ')}):'';
+   return wallRow(t(NORMS[m].label),t('verdict.'+tr.verdict)+(tr.sparseBasis?' '+t('wall.shakyBasis'):''),tr.tone,
+    wallCells(ys,metricUnit(m)),note)}).join('')}</div>
   </section>`}
 
 // ——— Часы спорта —————————————————————————————————————————————————————————————
@@ -726,24 +720,24 @@ function storyWorkouts(){
  let table=rows.map(({m,ys})=>{
   let y=ys.find(z=>z.year===last),kind=WORKOUT_NORM.kind[m.replace('workout_','')]||'moderate',
       norm=WORKOUT_NORM[kind],wk=y&&y.total?weeklyMinutes(y.total,last):null,
-      z=wk==null?null:wk<norm.low?'ниже рекомендации':wk<=norm.high?'в рекомендации':'выше рекомендации';
+      z=wk==null?null:wk<norm.low?t('zone.ex.below'):wk<=norm.high?t('zone.ex.in'):t('workout.aboveRec');
   return {m,kind,norm,wk,hours:y&&y.total?y.total/60:null,z}});
  let pt=part?rows.map(({m,ys})=>{let y=ys.find(z=>z.year===part);
   return {m,wk:y&&y.total?weeklyMinutes(y.total,part):null}}).filter(x=>x.wk!=null):[];
- return `<section class="panel workouts" data-role="workouts"><h1>Из чего сложилось движение</h1>
-  <p class="chart-note">Здесь не «обычный день», а объём за год: сколько часов этого спорта набралось. Со средними за день из блоков выше эти столбики не сравниваются. Шкала в каждой строке своя и начинается от нуля. Заштрихованный столбик — год, который ещё идёт: он ниже не потому, что вы остановились, а потому, что обрезан.</p>
+ return `<section class="panel workouts" data-role="workouts"><h1>${esc(t('workouts.title'))}</h1>
+  <p class="chart-note">${esc(t('workouts.note'))}</p>
   <div class="wall">${rows.map(({m,ys})=>wallRow(workoutName(m),'', 'neutral',
-    wallCells(ys.map(y=>({...y,value:y.total===null||!y.total?null:y.total/60})),'ч',true),'')).join('')}</div>
-  ${last?`<div class="tablewrap"><table><caption>Пересчёт в минуты в неделю за ${esc(last)} год</caption>
-   <thead><tr><th>Вид</th><th>Часов за год</th><th>Минут в неделю</th><th>Рекомендация для всей нагрузки</th><th>Этот вид сам по себе</th></tr></thead><tbody>
-   ${table.map(t=>`<tr><th scope="row">${esc(workoutName(t.m))}</th>
-    <td>${t.hours==null?'—':esc(fmt(t.hours,1))}</td>
-    <td>${t.wk==null?'—':esc(fmt(t.wk,0))}</td>
-    <td>${esc(t.norm.low)}–${esc(t.norm.high)} мин/нед · ${esc(t.norm.label)} ${refs(t.norm.src)}</td>
-    <td>${t.z?esc(t.z):'—'}</td></tr>`).join('')}
+    wallCells(ys.map(y=>({...y,value:y.total===null||!y.total?null:y.total/60})),t('unit.hours'),true),'')).join('')}</div>
+  ${last?`<div class="tablewrap"><table><caption>${esc(t('workouts.caption',{year:last}))}</caption>
+   <thead><tr><th>${esc(t('workouts.col.kind'))}</th><th>${esc(t('workouts.col.hours'))}</th><th>${esc(t('workouts.col.weekly'))}</th><th>${esc(t('workouts.col.rec'))}</th><th>${esc(t('workouts.col.alone'))}</th></tr></thead><tbody>
+   ${table.map(row=>`<tr><th scope="row">${esc(workoutName(row.m))}</th>
+    <td>${row.hours==null?'—':esc(fmt(row.hours,1))}</td>
+    <td>${row.wk==null?'—':esc(fmt(row.wk,0))}</td>
+    <td>${esc(row.norm.low)}–${esc(row.norm.high)} ${esc(t('unit.minPerWeek'))} · ${esc(t(row.norm.label))} ${refs(row.norm.src)}</td>
+    <td>${row.z?esc(row.z):'—'}</td></tr>`).join('')}
    </tbody></table></div>`:''}
-  ${pt.length?`<p class="partial"><b>${esc(part)}: год ещё идёт.</b> Минуты в неделю за него считаются по записанным месяцам, а не по всем 52 неделям — иначе обрезанный год всегда выглядел бы провалом. ${pt.map(x=>`${esc(workoutName(x.m))} — ${esc(fmt(x.wk,0))} мин/нед`).join('; ')}.</p>`:''}
-  <p class="chart-note">Рекомендация в 150–300 минут относится ко всей недельной нагрузке, а не к одному виду спорта: строка «ниже рекомендации» означает только то, что этого вида самого по себе не хватает, а не то, что вы недобираете в целом. ${esc(WORKOUT_NORM.noSum)} Велосипед отнесён к умеренной нагрузке: скоростей в архиве нет, а без них отделить умеренную езду от высокой нечем. ${refs(['cdc2023','who2020'])}</p>
+  ${pt.length?`<p class="partial"><b>${esc(t('workouts.running',{year:part}))}</b> ${esc(t('workouts.runningNote'))} ${pt.map(x=>`${esc(workoutName(x.m))} — ${esc(fmt(x.wk,0))} ${esc(t('unit.minPerWeek'))}`).join('; ')}.</p>`:''}
+  <p class="chart-note">${esc(t('workouts.recNote'))} ${esc(t(WORKOUT_NORM.noSum))} ${esc(t('workouts.cyclingNote'))} ${refs(['cdc2023','who2020'])}</p>
  </section>`}
 
 function storyTab(){
@@ -753,5 +747,5 @@ function storyTab(){
 // Шов раздела: браузерные проверки держатся за него, а не за разметку.
 const STORY={yearly,yearStatus,horizons,trendVerdict,weeklyMinutes,fullYears,partialYears,
  storyRows,sleepIsWindows,compareTo,percentileBand,bands,zone,weeklyFromDaily,
- coverChips,storyWhoNote,yearTrust,storyTrend,seasonNote,chartNotes,storyFactList,wallCells,hrCategory,storyHorizons,unitFor,plural,ruler,refs,normBlock,storyChange,storySources,SOURCE_NO,archDir,rankAmongYears,storyAge,ageInYear,STORY_UNIT,
+ coverChips,storyWhoNote,yearTrust,storyTrend,seasonNote,chartNotes,storyFactList,wallCells,hrCategory,storyHorizons,unitFor,ruler,refs,normBlock,storyChange,storySources,SOURCE_NO,archDir,rankAmongYears,storyAge,ageInYear,STORY_UNIT,
  NOISE,POLE,STATUS_WORD,STORY_METRICS,SOURCES,NORMS,WORKOUT_NORM,NOISE_NOTE,CHECKED};

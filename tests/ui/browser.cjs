@@ -102,6 +102,12 @@ let browser = null;
   // переключение языка. TX — весь словарь текущего языка, снятый со страницы один раз.
   const TX = await page.evaluate(() => Object.fromEntries(Object.keys(HealthUI.dict()).map(k => [k, HealthUI.t(k)])));
   const rx = (...keys) => new RegExp(keys.map(k => TX[k].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'));
+  // Кусок значения после подстановки: «{year} год: {days} — этому году можно верить.» без
+  // головы остаётся куском, который не зависит от чисел, но зависит от языка.
+  const tail = (key, mark) => TX[key].split(mark)[1];
+  const tv = (key, vars) => Object.entries(vars).reduce((acc, [n, v]) => acc.split('{' + n + '}').join(v), TX[key]);
+  const PL = await page.evaluate(() => ({ session1: HealthUI.tPlural(1, 'plural.session'), sessionMany: HealthUI.tPlural(5, 'plural.session'),
+    monthIn10: HealthUI.tPlural(10, 'plural.monthIn') }));
 
   check('the seam is present', await page.evaluate(() => typeof window.HealthUI === 'object' && HealthUI.version === 1));
 
@@ -266,7 +272,7 @@ let browser = null;
   check('a year with records reads as present', story.spokenYear === 'full');
   check('a change under the noise floor has no direction', story.quietDir === 'flat');
   check('a change over the noise floor has one', story.loudDir === 'up' && story.loudTone === 'good');
-  check('a rising row gets a verdict', story.trend === 'растёт');
+  check('a rising row gets a verdict', story.trend === 'up');
   check('rising resting heart rate is not coloured as good', story.hrDir === 'up' && story.hrTone === 'watch');
   check('a full year is divided by 52.18 weeks', Math.abs(story.weekFull - 100) < 0.01);
   check('a cut year is divided by the weeks it recorded', Math.abs(story.weekCut - 1820 / (182 / 7)) < 1e-9);
@@ -324,19 +330,19 @@ let browser = null;
   if (norms.missing.length) console.log(norms.missing);
   check('every source has an organisation, a title, a URL and a check date', norms.badPaperwork.length === 0);
   if (norms.badPaperwork.length) console.log(norms.badPaperwork);
-  check('a man of 45 at 38.0 lands between the 50th and the 75th', /между 50-м и 75-м/.test(norms.band45 || ''));
+  check('a man of 45 at 38.0 lands between the 50th and the 75th', (norms.band45 || '').includes(tv('pct.between', { a: 50, b: 75 })));
   check('outside 20-79 there is no percentile category', norms.band85 === null);
   check('without a sex there is no percentile category', norms.bandNoSex === null);
   check('above the top percentile is named, not interpolated', /95/.test(norms.bandTop || ''));
-  check('6.9 h of sleep is below the recommendation', norms.sleepLow === 'меньше рекомендации');
-  check('7.5 h of sleep is inside it', norms.sleepIn === 'в рекомендации');
-  check('8.5 h is inside it at 40 and above it at 70', norms.sleepYoungIn === 'в рекомендации' && /больше рекомендации/.test(norms.sleepOldOver));
+  check('6.9 h of sleep is below the recommendation', norms.sleepLow === TX['zone.sleep.below']);
+  check('7.5 h of sleep is inside it', norms.sleepIn === TX['zone.sleep.in']);
+  check('8.5 h is inside it at 40 and above it at 70', norms.sleepYoungIn === TX['zone.sleep.in'] && norms.sleepOldOver.includes(TX['zone.sleep.above']));
   check('21.5 min a day is 150.5 min a week', Math.abs(norms.weekly - 150.5) < 1e-9);
-  check('150.5 min a week is inside the recommendation', norms.exercise === 'в рекомендации');
-  check('140 min a week is below it', norms.exerciseLow === 'ниже рекомендации');
+  check('150.5 min a week is inside the recommendation', norms.exercise === TX['zone.ex.in']);
+  check('140 min a week is below it', norms.exerciseLow === TX['zone.ex.below']);
   check('a resting pulse of 72 is in the usual range', /60/.test(norms.hrOk));
   check('a resting pulse of 104 asks for attention, not alarm', norms.hrHigh === 'watch');
-  check('the step plateau follows age', /плато/.test(norms.stepsYoungPlateau) && /плато/.test(norms.stepsOldPlateau));
+  check('the step plateau follows age', norms.stepsYoungPlateau === TX['zone.steps.plateauYours'] && norms.stepsOldPlateau === TX['zone.steps.plateauYours']);
   check('vo2max shows no ruler until the year of birth is known', norms.vo2NoAge === 0);
 
   // The cover chips. They speak in directions, and the phrase comes before the figure.
@@ -422,7 +428,9 @@ let browser = null;
   await page.waitForTimeout(50);
   check('smoothing select stays on 3 months after re-render', await page.evaluate(() => document.querySelector('[data-smooth-key="heart"]').value === '3' && HealthUI.state().smooth.heart === '3'));
   check('the other chart is not smoothed by the heart select', await page.evaluate(() => (HealthUI.state().smooth.activity || '0') === '0'));
-  check('the trend caption is written in words under the chart', await page.evaluate(() => /Тренд по полным годам всего архива: (растёт|снижается|ровно|данных мало)/.test(document.querySelector('.chart-trend')?.textContent || '')));
+  const trendCaption = await page.evaluate(() => document.querySelector('.chart-trend')?.textContent || '');
+  check('the trend caption is written in words under the chart',
+    trendCaption.includes(TX['trend.title'] + ': ') && rx('trend.up', 'trend.down', 'trend.flat', 'trend.few').test(trendCaption));
   const twelve = await page.evaluate(() => {
     const row = (m, v, d) => ({ month: m, value: v, observed_days: d });
     const ms = ['2020-01','2020-02','2020-03','2020-04','2020-05','2020-06','2020-07','2020-08','2020-09','2020-10','2020-11','2020-12'];
@@ -489,10 +497,10 @@ let browser = null;
       offBar: offBar.length,
       normCount: norms.length,
       normsWithoutRef: norms.filter(b => !b.querySelector('[data-role="ref"]')).length,
-      partialNoted: /год ещё идёт/.test(app.textContent),
-      noDiagnosis: /не ставит диагноз/.test(app.textContent),
-      workingThresholds: /рабочие порог|рабочий порог/.test(app.textContent),
-      stepsHaveNoOfficialNorm: /официальной нормы/i.test(app.textContent),
+      partialNoted: app.textContent.includes(HealthUI.t('status.partial')),
+      noDiagnosis: app.textContent.includes(HealthUI.t('src.disclaimer')),
+      workingThresholds: app.textContent.includes(HealthUI.t('noise.title')),
+      stepsHaveNoOfficialNorm: app.textContent.includes(HealthUI.t('src.stepsNoNorm')),
     };
   });
   check('the rendered section carries footnotes', shown.refCount > 10);
@@ -523,9 +531,9 @@ let browser = null;
       anchors: app.querySelectorAll('.wall-anchor').length,
       verdicts: app.querySelectorAll('[data-role="wall-verdict"]').length,
       workoutBlock: !!app.querySelector('[data-role="workouts"]'),
-      workoutCaption: /объём за год/.test(app.textContent),
+      workoutCaption: app.textContent.includes(HealthUI.t('workouts.note')),
       chips: app.querySelectorAll('[data-ui="storyMetric"]').length,
-      noSummedIntensity: /не складыва/.test(app.textContent),
+      noSummedIntensity: app.textContent.includes(HealthUI.t('workout.noSum')),
     };
   });
   check('the interesting facts are capped at five', rest.facts > 0 && rest.facts <= 5);
@@ -573,7 +581,7 @@ let browser = null;
   });
   check('the sleep tab carries a stages-by-month block', stages.box && stages.d);
   check('stage shares of a month add up to one', stages.sumsOk === true);
-  check('months before the staging watch are all «без стадии», months after have deep and REM', stages.earlyUnspecified === true && stages.lateStaged === true);
+  check('months before the staging watch carry no stage, months after have deep and REM', stages.earlyUnspecified === true && stages.lateStaged === true);
   check('the stages block has a row per year and bars per month', stages.yearRows === true && stages.bars === true);
   check('every legend item of the stages block explains its stage on hover', await page.evaluate(() => {
     const items = [...HealthUI.control('app').querySelectorAll('[data-role="sleep-stages"] .legend .help')];
@@ -588,12 +596,13 @@ let browser = null;
   check('the story tab has no stages block', await page.evaluate(() => !HealthUI.control('app').querySelector('[data-role="sleep-stages"]')));
   await page.click('[data-tab="workouts"]');
   check('sport columns run from the most hours to the least', sportYears.sorted === true);
-  check('a year with a gap in the records says so in the table', /записи есть в 10 месяцах/.test(sportYears.text));
+  check('a year with a gap in the records says so in the table', sportYears.text.includes(tv('sport.sparseYear', { n: 10, word: PL.monthIn10 })));
   // Занятия называются словом и склоняются по числу перед ними, без «зан.».
   check('sessions are spelled out and declined, never abbreviated', await page.evaluate(() => {
-    const t = HealthUI.control('app').textContent;
-    return !/зан\./.test(t) && /\d\s*занятий/.test(t)
-      && (!/1\s091/.test(t) || /1\s091\s*занятие/.test(t));
+    const txt = HealthUI.control('app').textContent;
+    const many = HealthUI.tPlural(5, 'plural.session'), one = HealthUI.tPlural(1, 'plural.session');
+    return !/зан\./.test(txt) && new RegExp('\\d\\s*' + many).test(txt)
+      && (!/1\s091/.test(txt) || new RegExp('1\\s091\\s*' + one).test(txt));
   }));
 
   check('the share of a sport stands next to its name, not at the far edge', await page.evaluate(() => {
@@ -639,10 +648,10 @@ let browser = null;
       above: !!el && !!table && (el.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING) };
   });
   check('the trust line stands above the change table and names the year', trust.above && new RegExp('^' + trust.t.year).test(trust.text));
-  check('a full year is called trustworthy, a sparse one is not', trust.t.ok ? /можно верить/.test(trust.text) && /tone-good/.test(trust.tone) : /верить нельзя/.test(trust.text) && /tone-watch/.test(trust.tone));
-  check('shaky series in that year are named, the rest are not listed', trust.t.shaky.every(n => trust.text.includes(n)) && (trust.t.shaky.length > 0) === /Шаткие в нём/.test(trust.text));
+  check('a full year is called trustworthy, a sparse one is not', trust.t.ok ? trust.text.includes(tail('trust.ok', '{days}')) && /tone-good/.test(trust.tone) : trust.text.includes(tail('trust.bad', '{days}')) && /tone-watch/.test(trust.tone));
+  check('shaky series in that year are named, the rest are not listed', trust.t.shaky.every(n => trust.text.includes(n)) && (trust.t.shaky.length > 0) === trust.text.includes(TX['trust.shaky'].split('{list}')[0]));
   check('without a year and a sex the norms say so in words',
-    /не заданы/.test(whoUnknown.note) && /стартовом экране/.test(whoUnknown.note));
+    whoUnknown.note === TX['who.unknown']);
 
   const typed = await page.evaluate(() => {
     HealthUI.setState({ birthYear: 1980, sex: 'm' });
@@ -650,11 +659,11 @@ let browser = null;
     const app = HealthUI.control('app');
     const blocks = [...app.querySelectorAll('[data-role="norm"]')].map(n => n.textContent);
     return { note: (app.querySelector('[data-role="story-who"]') || {}).textContent || '',
-      percentile: blocks.some(t => /перцентил/.test(t)) };
+      percentile: blocks.some(x => x.includes(HealthUI.t('pct.between', { a: '#', b: '#' }).split('#').pop())) };
   });
   check('with a year and a sex the vo2max block names a percentile', typed.percentile);
   check('the norms name the year and the sex they were matched on',
-    /1980/.test(typed.note) && /мужской/.test(typed.note));
+    /1980/.test(typed.note) && typed.note.includes(TX['who.male']));
   await page.evaluate(() => { HealthUI.setState({ birthYear: null, sex: null, birthText: '' }); HealthUI.render(); });
 
   // The checklist asks for this one by name: at phone width the page must not slide sideways.
@@ -718,8 +727,8 @@ let browser = null;
     };
   });
   check('a one-year archive without vo2max or sleep still renders', errors.length === 0);
-  check('metrics with no records say so instead of disappearing', /записей по этому показателю в архиве нет/i.test(thin.text));
-  check('one year is not enough for a trend, and the page says that', thin.verdicts.every(v => /данных мало/.test(v)));
+  check('metrics with no records say so instead of disappearing', thin.text.includes(TX['norms.noRecords']));
+  check('one year is not enough for a trend, and the page says that', thin.verdicts.every(v => v.includes(TX['verdict.few'])));
   check('the thin page still carries its sources', thin.refs > 0);
   await page.click('[data-tab="overview"]');
   await reload();
@@ -1142,7 +1151,7 @@ let browser = null;
   }));
   check('after reading, the dashboard opens on the plain-language section', ready.tab === 'story' && ready.start && ready.loading && (await visible('nav')));
   check('what was typed on the start screen is what the norms are matched on',
-    /1988/.test(ready.who) && /мужской/.test(ready.who) && !ready.intro);
+    /1988/.test(ready.who) && ready.who.includes(TX['who.male']) && !ready.intro);
   // Cancelling while the ribbon is still running, after the parse itself has finished, is still a cancel.
   await empty.click('[data-ui="reset"]');
   await empty.evaluate(() => HealthUI.dropToasts(true));
