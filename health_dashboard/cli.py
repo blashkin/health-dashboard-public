@@ -1,7 +1,7 @@
 """Точка входа. Печатает только статус; личные значения не выводятся ни при успехе, ни при сбое."""
 import argparse, json, os, sys, webbrowser
 from pathlib import Path
-from . import aggregate, demo, pipeline, report, select
+from . import aggregate, fake_archive, pipeline, report, select
 from . import SCHEMA_VERSION, __version__
 from .verify import verify
 
@@ -62,20 +62,14 @@ def cmd_build(a):
  return finish(out,main,sleep,'build',a.open)
 
 def cmd_demo(a):
+ """Один путь для всех: пустая страница и синтетический архив, который в неё открывают."""
  out=a.output; prepare(out,a.force)
- data=out/DATA; data.mkdir(parents=True,exist_ok=True); os.chmod(data,0o700)
- files=demo.generate()
- for name,obj in files.items():
-  aggregate.write_text(data/name,json.dumps(obj,ensure_ascii=False,indent=2))
- return finish(out,files['approved_monthly.json'],files['monthly_sleep_windows.json'],'demo',a.open)
-
-def cmd_page(a):
- """Страница без данных: открывается приглашением, архив читается в браузере."""
- out=a.output; prepare(out,a.force)
- dashboard=out/'dashboard.html'
+ dashboard=out/'dashboard.html'; archive=out/'fake_archive.zip'
  aggregate.write_text(dashboard,report.build(None,None))
- write_marker(out,'page')
- print('Готово. Пустой дашборд: %s'%dashboard)
+ aggregate.replace_file(archive,fake_archive.write)
+ write_marker(out,'demo')
+ print('Готово. Дашборд: %s'%dashboard)
+ print('Откройте его в браузере и нажмите «Открыть архив»: рядом лежит синтетическая выгрузка %s.'%archive.name)
  if a.open: webbrowser.open(dashboard.resolve().as_uri())
  return 0
 
@@ -98,16 +92,11 @@ def parser():
  b.add_argument('--open',action='store_true',help='открыть готовый файл в браузере')
  b.add_argument('--no-inventory',action='store_true',help='не собирать технический отчёт report.html')
  b.set_defaults(func=cmd_build)
- d=sub.add_parser('demo',help='собрать дашборд на синтетических данных')
+ d=sub.add_parser('demo',help='собрать пустой дашборд и синтетический архив к нему')
  d.add_argument('-o','--output',type=Path,default=Path('out/demo'),help='каталог результата')
  d.add_argument('--force',action='store_true',help='писать в непустой чужой каталог, не трогая посторонние файлы')
  d.add_argument('--open',action='store_true',help='открыть готовый файл в браузере')
  d.set_defaults(func=cmd_demo)
- e=sub.add_parser('page',help='собрать пустой дашборд: архив открывается в браузере')
- e.add_argument('-o','--output',type=Path,default=Path('out/page'),help='каталог результата')
- e.add_argument('--force',action='store_true',help='писать в непустой чужой каталог, не трогая посторонние файлы')
- e.add_argument('--open',action='store_true',help='открыть готовый файл в браузере')
- e.set_defaults(func=cmd_page)
  v=sub.add_parser('verify',help='проверить согласованность готового каталога')
  v.add_argument('folder',type=Path,help='каталог результата')
  v.set_defaults(func=cmd_verify)

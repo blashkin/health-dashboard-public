@@ -19,30 +19,25 @@ class CliTests(unittest.TestCase):
   quiet.enter_context(contextlib.redirect_stdout(io.StringIO()))
   quiet.enter_context(contextlib.redirect_stderr(io.StringIO()))
   self.addCleanup(quiet.close)
- def test_demo_writes_a_dashboard_and_a_marker(self):
+ def test_demo_writes_an_empty_dashboard_and_a_fake_archive(self):
   out=self.path/'result'
   self.assertEqual(cli.main(['demo','-o',str(out)]),0)
-  self.assertTrue((out/'dashboard.html').is_file())
-  self.assertTrue((out/'data/approved_monthly.json').is_file())
+  html=(out/'dashboard.html').read_text(encoding='utf-8')
+  self.assertIn('const EMBEDDED_MAIN = null',html)
+  self.assertTrue((out/'fake_archive.zip').is_file())
+  self.assertFalse((out/'data').exists())
   marker=json.loads((out/cli.MARKER).read_text(encoding='utf-8'))
   self.assertEqual(marker['tool'],'health-dashboard')
   self.assertIn('schema',marker); self.assertIn('version',marker)
   self.assertEqual(marker['mode'],'demo')
- def test_page_writes_an_empty_dashboard_without_data(self):
-  out=self.path/'page'
-  self.assertEqual(cli.main(['page','-o',str(out)]),0)
-  html=(out/'dashboard.html').read_text(encoding='utf-8')
-  self.assertIn('const EMBEDDED_MAIN = null',html)
-  self.assertFalse((out/'data').exists())
-  self.assertEqual(json.loads((out/cli.MARKER).read_text(encoding='utf-8'))['mode'],'page')
  def test_second_run_updates_in_place(self):
   out=self.path/'result'
   cli.main(['demo','-o',str(out)])
-  (out/'data/своя_заметка.txt').write_text('оставить на месте',encoding='utf-8')
+  (out/'своя_заметка.txt').write_text('оставить на месте',encoding='utf-8')
   self.assertEqual(cli.main(['demo','-o',str(out)]),0)
   self.assertTrue((out/'dashboard.html').is_file())
   # Обновление на месте, а не пересоздание каталога: посторонний файл цел.
-  self.assertTrue((out/'data/своя_заметка.txt').is_file())
+  self.assertTrue((out/'своя_заметка.txt').is_file())
  def test_foreign_directory_is_refused_with_code_two(self):
   out=self.path/'чужой'; out.mkdir(); (out/'важное.txt').write_text('не трогать',encoding='utf-8')
   self.assertEqual(cli.main(['demo','-o',str(out)]),2)
@@ -64,9 +59,8 @@ class CliTests(unittest.TestCase):
   out=self.path/'result'
   cli.main(['demo','-o',str(out)])
   self.assertEqual(mode(out),0o700)
-  self.assertEqual(mode(out/'data'),0o700)
   self.assertEqual(mode(out/'dashboard.html'),0o600)
-  self.assertEqual(mode(out/'data/approved_monthly.json'),0o600)
+  self.assertEqual(mode(out/'fake_archive.zip'),0o600)
  def test_open_hands_a_file_url_to_the_browser(self):
   out=self.path/'result'
   with mock.patch.object(cli.webbrowser,'open') as opened:

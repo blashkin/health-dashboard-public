@@ -121,7 +121,8 @@ async function openArchive(file){
   // Собственный разбор проходит ту же проверку, что и чужой файл: одна дверь, один контроль.
   validateMain(out.main);validateSleep(out.sleep);
   Object.assign(state,{main:out.main,sleep:out.sleep,sleepMode:'window',reconcile:[],detail:null});
-  state.isDemo=false;state.imported=false;state.fromArchive=true;state.tab='story';
+  // Синтетический архив из команды demo помечается, чтобы никто не принял его за свои данные.
+  state.isDemo=/^fake_archive\.zip$/i.test(file.name||'');state.imported=false;state.fromArchive=true;state.tab='story';
   document.querySelectorAll('[data-tab]').forEach(x=>x.setAttribute('aria-selected',x.dataset.tab==='story'));
   state.metric=activeMetrics()[0]||'steps';
   initControls();render();

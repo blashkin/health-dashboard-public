@@ -88,6 +88,20 @@ class ArchiveEquivalenceTests(unittest.TestCase):
   """Обычная выгрузка: имя export.xml находится без обхода по корневому тегу."""
   self.check(rich_xml(), name='apple_health_export/export.xml')
 
+ def test_fake_archive_matches_and_is_deterministic(self):
+  """Демонстрационный архив: та же выгрузка обоими путями, байт в байт при перегенерации."""
+  from health_dashboard import fake_archive, pipeline, select
+  with tempfile.TemporaryDirectory() as tmp:
+   a=fake_archive.write(Path(tmp)/'fake_archive.zip'); b=fake_archive.write(Path(tmp)/'again.zip')
+   self.assertEqual(a.read_bytes(),b.read_bytes())
+   data=Path(tmp)/'data'; pipeline.run(a,data,inventory_report=False)
+   main=select.build_package(data); sleep=json.loads((data/'monthly_sleep_windows.json').read_text(encoding='utf-8'))
+   self.assertGreater(main['quality']['duplicates_removed'],0)
+   self.assertTrue(any(g['metric']=='steps' for g in main['gaps']),'разрыв 2017 года должен быть виден')
+   page=run_page(a,tmp)
+   self.assertEqual([],differences(main,page['main'],'main'))
+   self.assertEqual([],differences(sleep,page['sleep'],'sleep'))
+
  def test_browser_timezone_does_not_change_the_result(self):
   """Смещение берётся из записи. Часовой пояс браузера не должен менять ни одного числа."""
   with tempfile.TemporaryDirectory() as tmp:

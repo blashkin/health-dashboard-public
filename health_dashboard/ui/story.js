@@ -382,6 +382,9 @@ function storyIntro(){
  // В поле хранится набранный текст, а в state.birthYear — разобранное из него число.
  // Иначе на середине правки («19805») поле очистилось бы прямо под руками.
  let sex=storySex(),by=state.birthText==null?(state.birthYear==null?'':String(state.birthYear)):state.birthText;
+ // Оба поля уже заданы (на стартовом экране или здесь) — блок сворачивается в строку.
+ if(sex&&state.birthYear&&!state.editWho)
+  return `<p class="story-who" data-role="story-who">Год рождения ${esc(state.birthYear)} · ${sex==='m'?'мужской':'женский'} · <button type="button" class="linklike" data-ui="storyEditWho">изменить</button></p>`;
  return `<section class="panel story-intro"><h1>Два поля для следующего блока</h1><div class="story-fields">
   <div class="field"><label for="storyBirth">Год рождения</label><input id="storyBirth" data-ui="storyBirth" inputmode="numeric" maxlength="4" placeholder="например, 1980" value="${esc(by)}"></div>
   <div class="field"><label for="storySex">Пол</label><select id="storySex" data-ui="storySex">
@@ -399,7 +402,7 @@ function storyCover(){
    <div class="chip-line">${esc(c.line)}</div>
    <div class="chip-num">${esc(c.num)}</div>
    <div class="chip-tone">${esc(TONE_WORD[c.tone])}</div></div>`).join('')}</div>
-  <p class="chart-note">Цвет слева от чипа продублирован словом: страница не полагается на то, что цвет вообще различим.</p></section>`}
+  <p class="chart-note">Статус в чипе назван словом, а не только цветом: страница не полагается на то, что цвет вообще различим.</p></section>`}
 
 // Словарь из брифа: один раз, перед числами, и сворачивается, чтобы не мешать повторному чтению.
 const GLOSSARY=[['Шаги','сколько вы реально двигаетесь в обычный день, а не «спорт».'],
@@ -428,7 +431,9 @@ function bindStory(){
   let again=HealthUI.control('storyBirth');
   if(again){again.focus();try{again.setSelectionRange(v.length,v.length)}catch{}}};
  let s=HealthUI.control('storySex');
- if(s)s.onchange=e=>{state.sex=e.target.value==='m'||e.target.value==='f'?e.target.value:null;render()}}
+ if(s)s.onchange=e=>{state.sex=e.target.value==='m'||e.target.value==='f'?e.target.value:null;state.editWho=false;render()};
+ let w=HealthUI.control('storyEditWho');
+ if(w)w.onclick=()=>{state.editWho=true;render()}}
 
 // ——— Было и стало, нормы, источники ——————————————————————————————————————————
 const DEC={steps:0,exercise_min:0,resting_hr:0,vo2max:1,sleep_hours:1};

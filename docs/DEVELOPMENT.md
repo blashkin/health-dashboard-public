@@ -13,7 +13,8 @@ health_dashboard/        the package; runs from the repository directory, no ins
   inventory.py           the technical report.html
   report.py              glues ui/ and the data into one standalone HTML file
   verify.py              consistency check of a finished result directory
-  demo.py                deterministic synthetic fixtures
+  demo.py                deterministic synthetic aggregates for the checks
+  fake_archive.py        deterministic synthetic export.zip for the demo command
   ui/index.html          markup and placeholders
   ui/styles.css          the stylesheet
   ui/app.js              the interface itself
@@ -44,6 +45,21 @@ default path.
 Python 3.9, standard library only. No dependency may be added without a very good
 reason: the promise that nothing is downloaded and nothing is sent is the product.
 
+The typeface is embedded. `health_dashboard/ui/fonts/` holds Golos Text (SIL OFL,
+`OFL.txt` beside it): four weights, Cyrillic and Latin subsets from Google Fonts, about
+77 KB together, listed in `manifest.json` with their `unicode-range`. `report.font_faces()`
+turns them into `@font-face` rules with `data:` URIs in front of `styles.css`, and the
+CSP allows `font-src data:`. To change the face, replace the files and the manifest.
+
+`python3 -m health_dashboard demo -o out/demo` writes the empty page and
+`fake_archive.zip` next to it (`fake_archive.py`, deterministic, about 440 KB, ~35k
+records from 2016 to 2026 with a gap, a watch change, duplicates and a second source);
+`report.build(None, None)` is the page from Python. The committed `demo/` aggregates
+stay for the browser checks and the report tests. With `EMBEDDED_MAIN === null` the
+page shows the start screen (`data-ui="start"`) and, while reading, the year ribbon
+(`data-ui="loading"`); `renderShell()` in app.js is the single switch between the three
+states.
+
 ## Node is for the interface checks only, never for running the program
 
 The program itself needs no Node. `report.py` does the job `build.mjs` used to do.
@@ -64,22 +80,15 @@ directory, the browser checks build theirs in memory and run on `demo/`.
 itself instead of failing, so a machine without Node still gets a green suite — and a
 smaller one. Do not read that green as proof that the page agrees with Python.
 
-Browser — 128 checks against a build made by Python:
+Browser — 128 checks against a page with data. Since `demo` writes an empty page, build
+one from the fake archive first:
 
 ```sh
 python3 -m health_dashboard demo -o out/demo
+```
 
-The typeface is embedded. `health_dashboard/ui/fonts/` holds Golos Text (SIL OFL,
-`OFL.txt` beside it): four weights, Cyrillic and Latin subsets from Google Fonts, about
-77 KB together, listed in `manifest.json` with their `unicode-range`. `report.font_faces()`
-turns them into `@font-face` rules with `data:` URIs in front of `styles.css`, and the
-CSP allows `font-src data:`. To change the face, replace the files and the manifest.
-
-The empty page (no data, the archive is opened in the browser) is built with
-`python3 -m health_dashboard page -o out/page`; `report.build(None, None)` is the
-same thing from Python. With `EMBEDDED_MAIN === null` the page shows the start
-screen (`data-ui="start"`) and, while reading, the year ribbon (`data-ui="loading"`);
-`renderShell()` in app.js is the single switch between the three states.
+```sh
+python3 -m health_dashboard build out/demo/fake_archive.zip -o out/check
 ```
 
 ```sh
@@ -89,7 +98,8 @@ node tests/ui/browser.cjs
 Playwright is resolved from a local install or from `PLAYWRIGHT_MODULE=/path/to/playwright`.
 Chrome is taken through `channel: 'chrome'`; a different binary can be given with
 `CHROME_PATH`. The script takes the dashboard path as its first argument or from
-`HEALTH_DASHBOARD_HTML`, and defaults to `out/demo/dashboard.html`.
+`HEALTH_DASHBOARD_HTML`, and defaults to `out/demo/dashboard.html` — pass
+`out/check/dashboard.html` for the build above.
 
 ## What the test modules are for
 
