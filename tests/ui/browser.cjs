@@ -534,6 +534,25 @@ let browser = null;
   // Доля вида спорта обязана стоять при своём названии. Раньше её колонка уезжала
   // к противоположному краю ячейки, и у левой диаграммы проценты читались как числа правой.
   await page.click('[data-tab="workouts"]');
+  // Годовая таблица тренировок: по каждому виду часы, начала и средняя длительность,
+  // средняя — Σминут / Σначал по месяцам, где есть оба ряда. Столбцы — по убыванию часов.
+  const sportYears = await page.evaluate(() => {
+    const t = HealthUI.sportYears(), app = HealthUI.control('app'), box = app.querySelector('[data-role="sport-years"]');
+    if (!box || !t.years.length) return { box: !!box, years: t.years.length };
+    const y = t.years.find(x => !x.edge && x.months === 12) || t.years[0], c = y.sports[0];
+    const rows = HealthUI.state().main.monthly.filter(r => r.month.startsWith(y.year));
+    const mins = rows.filter(r => r.metric === c.metric && r.value !== null), cnt = new Map(rows.filter(r => r.metric === c.metric + '_count' && r.value !== null).map(r => [r.month, Number(r.value)]));
+    const both = mins.filter(r => cnt.has(r.month)), want = both.reduce((s, r) => s + Number(r.value), 0) / both.reduce((s, r) => s + cnt.get(r.month), 0);
+    const hours = t.years.map(yy => yy.sports.map(x => x.hours || 0)), colSum = t.sports.map((_, i) => hours.reduce((s, h) => s + h[i], 0));
+    return { box: true, years: t.years.length, avgOk: Math.abs(c.avg - want) < 1e-9,
+      sorted: colSum.every((v, i) => i === 0 || colSum[i - 1] >= v),
+      cellsInDom: box.querySelectorAll('tbody tr').length === t.years.length && box.querySelectorAll('thead th').length === t.sports.length + 1,
+      text: box.textContent };
+  });
+  check('the workouts tab carries a sport-by-year table', sportYears.box && sportYears.years > 1 && sportYears.cellsInDom);
+  check('the yearly average duration is sum of minutes over sum of starts on matching months', sportYears.avgOk === true);
+  check('sport columns run from the most hours to the least', sportYears.sorted === true);
+  check('a year with a gap in the records says so in the table', /записи есть в 10 месяцах/.test(sportYears.text));
   // Занятия называются словом и склоняются по числу перед ними, без «зан.».
   check('sessions are spelled out and declined, never abbreviated', await page.evaluate(() => {
     const t = HealthUI.control('app').textContent;
@@ -574,6 +593,18 @@ let browser = null;
       note: (app.querySelector('[data-role="story-who"]') || {}).textContent || '' };
   });
   check('the story tab carries no fields of its own', !whoUnknown.fields && !whoUnknown.edit);
+
+  // Одна строка над «Было и стало»: можно ли верить году, по которому идёт сравнение.
+  // Судья — шаги; шаткие в этом году ряды названы по имени.
+  const trust = await page.evaluate(() => {
+    const t = HealthUI.story.yearTrust(), el = HealthUI.control('app').querySelector('[data-role="year-trust"]');
+    const table = HealthUI.control('app').querySelector('table.change');
+    return { t, text: el ? el.textContent : '', tone: el ? el.className : '',
+      above: !!el && !!table && (el.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING) };
+  });
+  check('the trust line stands above the change table and names the year', trust.above && new RegExp('^' + trust.t.year).test(trust.text));
+  check('a full year is called trustworthy, a sparse one is not', trust.t.ok ? /можно верить/.test(trust.text) && /tone-good/.test(trust.tone) : /верить нельзя/.test(trust.text) && /tone-watch/.test(trust.tone));
+  check('shaky series in that year are named, the rest are not listed', trust.t.shaky.every(n => trust.text.includes(n)) && (trust.t.shaky.length > 0) === /Шаткие в нём/.test(trust.text));
   check('without a year and a sex the norms say so in words',
     /не заданы/.test(whoUnknown.note) && /стартовом экране/.test(whoUnknown.note));
 

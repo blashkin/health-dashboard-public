@@ -42,6 +42,7 @@ button.primary{color:#fff;background:var(--accent);border-color:var(--accent)}bu
 .glossary summary{cursor:pointer;font-weight:650}
 .glossary dl{margin:var(--s-3) 0 0}.glossary dt{font-weight:650;margin-top:var(--s-2)}
 .glossary dd{margin:var(--s-1) 0 0;color:var(--muted)}
+.year-trust{margin:0 0 var(--s-3)}
 .trust{margin:var(--s-3) 0 0;padding:var(--s-3);background:var(--soft);border-radius:var(--r-m);font-size:.88rem}
 @media(max-width:900px){.chips{grid-template-columns:1fr}}
 .norm{border:1px solid var(--line);border-radius:var(--r-l);padding:var(--s-4);margin:var(--s-3) 0;background:#fff}

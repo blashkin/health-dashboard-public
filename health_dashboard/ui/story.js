@@ -505,6 +505,22 @@ function deltaCell(metric,cmp){
  return `<td class="tone-${esc(cmp.tone)}"><div class="delta">${esc(num)}</div>`+
   `<div class="delta-word">${cmp.dir==='up'?'больше':'меньше'} · ${esc(TONE_WORD[cmp.tone])}</div></td>`}
 
+// Одна строка перед сравнением: можно ли верить году, по которому оно идёт. Судья — шаги:
+// они пишутся каждый день, и по ним видно, носили ли прибор. Остальные ряды называются
+// только тогда, когда в этом году они шаткие: тогда их строки в таблице читать с оглядкой.
+function yearTrust(){
+ let year=lastCompleteYear();if(!year)return null;
+ let judge=['steps','exercise_min'].map(m=>({m,y:yearly(m).find(z=>z.year===year)})).find(x=>x.y&&x.y.value!==null);
+ if(!judge)return null;
+ let {m,y}=judge,shaky=STORY_METRICS.filter(k=>k!==m&&yearStatus(k,year)==='sparse').map(k=>NORMS[k].label.toLowerCase()),
+     days=`${NORMS[m].label.toLowerCase()} записаны ${fmt(y.observedDays,0)} ${plural(y.observedDays,'день','дня','дней')} из ${fmt(y.calendarDays,0)}`,
+     ok=y.status==='full';
+ return {year,ok,shaky,text:ok
+  ?`${year} год: ${days} — этому году можно верить.${shaky.length?` Шаткие в нём только ${shaky.join(', ')}: записей меньше 80% дней.`:''}`
+  :`${year} год: ${days}, меньше 80% — этому году верить нельзя, среднее по нему шаткое.`}}
+function yearTrustLine(){let t=yearTrust();
+ return t?`<p class="trust year-trust tone-${t.ok?'good':'watch'}" data-role="year-trust">${esc(t.text)}</p>`:''}
+
 function storyChange(){
  let data=STORY_METRICS.map(m=>({m,h:storyHorizons(m)})).filter(x=>x.h.base),
      parts=STORY_METRICS.map(m=>({m,p:storyHorizons(m).partial})).filter(x=>x.p),
@@ -512,6 +528,7 @@ function storyChange(){
  if(!data.length)return `<section class="panel"><h1>Было и стало</h1>
   <p class="chart-note">Полных лет в архиве пока нет, поэтому сравнивать не с чем.</p></section>`;
  return `<section class="panel"><h1>Было и стало</h1>
+  ${yearTrustLine()}
   <p class="chart-note">Три горизонта сразу: прошлый год, начало архива и «ваш обычный год» — медиана всех полных лет. Один горизонт всегда врёт: год к году зависит от случайностей, а начало архива — от того, когда вы купили часы.</p>
   <div class="tablewrap"><table class="change"><thead><tr><th>Показатель</th><th>Последний полный год</th><th>Против прошлого года</th><th>Против первого полного года</th><th>Против обычного года</th></tr></thead><tbody>
   ${data.map(({m,h})=>`<tr><th scope="row">${esc(NORMS[m].label)}${h.sparseBasis?'<div class="sparse-flag">во все годы записей мало: сравнение шаткое</div>':''}</th>
@@ -736,5 +753,5 @@ function storyTab(){
 // Шов раздела: браузерные проверки держатся за него, а не за разметку.
 const STORY={yearly,yearStatus,horizons,trendVerdict,weeklyMinutes,fullYears,partialYears,
  storyRows,sleepIsWindows,compareTo,percentileBand,bands,zone,weeklyFromDaily,
- coverChips,storyWhoNote,storyTrend,seasonNote,chartNotes,storyFactList,wallCells,hrCategory,storyHorizons,unitFor,plural,ruler,refs,normBlock,storyChange,storySources,SOURCE_NO,archDir,rankAmongYears,storyAge,ageInYear,STORY_UNIT,
+ coverChips,storyWhoNote,yearTrust,storyTrend,seasonNote,chartNotes,storyFactList,wallCells,hrCategory,storyHorizons,unitFor,plural,ruler,refs,normBlock,storyChange,storySources,SOURCE_NO,archDir,rankAmongYears,storyAge,ageInYear,STORY_UNIT,
  NOISE,POLE,STATUS_WORD,STORY_METRICS,SOURCES,NORMS,WORKOUT_NORM,NOISE_NOTE,CHECKED};
