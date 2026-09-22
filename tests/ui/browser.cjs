@@ -851,6 +851,30 @@ let browser = null;
   });
   check('the spacing scale is in the tokens', padding.tokens);
 
+  // Тёмная тема. Цвет живёт только в токенах :root и в двух тематических блоках; ни одно
+  // правило вне их и ни один inline style не несёт цвет-литерал. Тумблер в шапке
+  // переключает data-theme на <html>, и бумага меняет цвет; на диск ничего не пишется.
+  const theme = await page.evaluate(() => {
+    const isRoot = sel => /^:root/.test(sel || '');
+    let literals = [];
+    for (const sheet of document.styleSheets) for (const rule of sheet.cssRules) {
+      const rules = rule.cssRules ? [...rule.cssRules] : [rule];
+      for (const r of rules) if (r.selectorText && !isRoot(r.selectorText) && /rgba?\(|#[0-9a-f]{3,8}\b/i.test(r.style.cssText)) literals.push(r.selectorText);
+    }
+    const inline = [...document.querySelectorAll('[style]')].filter(el => /#[0-9a-f]{3,8}\b|rgba?\(/i.test(el.getAttribute('style'))).length;
+    const paper = () => getComputedStyle(document.documentElement).getPropertyValue('--paper').trim();
+    const b = HealthUI.control('theme'), before = paper(), was = HealthUI.currentTheme();
+    b.click();
+    const after = paper(), now = HealthUI.currentTheme(), icon = b.dataset.theme, label = b.getAttribute('aria-label');
+    b.click();
+    return { literals, inline, flipped: was !== now && before !== after, icon: icon === now, label,
+      back: HealthUI.currentTheme() === was && paper() === before, stored: (() => { try { return localStorage.length } catch (e) { return 0 } })() };
+  });
+  check('no colour literal outside the token blocks', theme.literals.length === 0 && theme.inline === 0);
+  check('the theme toggle flips the theme and the paper colour', theme.flipped && theme.back);
+  check('the toggle shows the other theme and names it', theme.icon && /тема/.test(theme.label));
+  check('the theme is not written to storage', theme.stored === 0);
+
   // Отступы проверяются не выборочно, а сплошь: каждая вкладка, каждый видимый элемент.
   // Ненулевое значение padding / margin / gap обязано совпадать со ступенью шкалы.
   // Нутро SVG и строчные элементы пропускаются: там расстояния задаёт текст.
