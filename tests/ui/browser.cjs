@@ -98,6 +98,11 @@ let browser = null;
   // между проверками набор восстанавливается перезагрузкой страницы, а не этой кнопкой.
   const reload = async () => { await page.reload(); await page.waitForFunction(() => !!window.HealthUI && !!HealthUI.state().main); };
 
+  // Тексты сверяются по ключам словаря, а не по русским фразам: набор обязан пережить
+  // переключение языка. TX — весь словарь текущего языка, снятый со страницы один раз.
+  const TX = await page.evaluate(() => Object.fromEntries(Object.keys(HealthUI.dict()).map(k => [k, HealthUI.t(k)])));
+  const rx = (...keys) => new RegExp(keys.map(k => TX[k].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'));
+
   check('the seam is present', await page.evaluate(() => typeof window.HealthUI === 'object' && HealthUI.version === 1));
 
   // The plain-language section is what a first-time reader lands on; the period panel is
@@ -129,7 +134,7 @@ let browser = null;
   const [x1, x3] = [...paths.gap.matchAll(/[ML]([\d.]+),/g)].map(m => Number(m[1]));
   const [a1, a2] = [...paths.solid.matchAll(/[ML]([\d.]+),/g)].map(m => Number(m[1]));
   check('gap keeps calendar spacing', Math.abs((x3 - x1) - 2 * (a2 - a1)) < 0.6);
-  check('empty series shows a message, not an empty chart', paths.emptyText.includes('Нет данных'));
+  check('empty series shows a message, not an empty chart', paths.emptyText.includes(TX['chart.noData']));
   check('explicit zero is drawn', paths.zeroDots === 1);
 
   const validation = await page.evaluate(() => {
@@ -429,11 +434,11 @@ let browser = null;
   check('sums are averaged per month, not weighted by days', twelve.sums === 6.5);
   // Cards on the heart and sleep tabs: one mean, the two extreme months, the record count.
   const heartCards = await page.evaluate(() => [...document.querySelectorAll('[data-ui="app"] .card .label')].map(x => x.textContent));
-  check('the heart tab shows its cards', ['Среднее за период','Самый низкий месяц','Самый высокий месяц','Дней с измерением'].every(l => heartCards.includes(l)));
-  check('the heart tab compares with the same months a year earlier', (await page.textContent('[data-ui="app"]')).includes('Сравнение с теми же месяцами годом ранее'));
+  check('the heart tab shows its cards', [TX['card.periodMean'],TX['card.lowestMonth'],TX['card.highestMonth'],TX['heart.count']].every(l => heartCards.includes(l)));
+  check('the heart tab compares with the same months a year earlier', (await page.textContent('[data-ui="app"]')).includes(TX['compare.title']));
   await page.click('[data-tab="sleep"]');
   const sleepText = await page.textContent('[data-ui="app"]');
-  check('the sleep tab shows its cards', sleepText.includes('Среднее за период') && (sleepText.includes('Окон с записью') || sleepText.includes('Дней с записью')));
+  check('the sleep tab shows its cards', sleepText.includes(TX['card.periodMean']) && (sleepText.includes(TX['sleep.countWindows']) || sleepText.includes(TX['sleep.countDays'])));
   const smoothing = await page.evaluate(() => {
     const rows = [{ month: '2020-01', value: 10, observed_days: 1 }, { month: '2020-02', value: 20, observed_days: 2 }, { month: '2020-03', value: 30, observed_days: 3 }];
     const gapped = [{ month: '2020-01', value: 10, observed_days: 1 }, { month: '2020-03', value: 20, observed_days: 2 }, { month: '2020-04', value: 30, observed_days: 3 }];
@@ -514,7 +519,7 @@ let browser = null;
       noBestWord: !/(?<![а-яё])лучш(ий|ая|ее|ие|его|ему|им|ем|ую)/i.test(app.textContent),
       emptyCells: cells.filter(c => c.dataset.status === 'none').length,
       emptyWithBar: cells.filter(c => c.dataset.status === 'none' && c.querySelector('[data-role="wall-bar"]')).length,
-      emptyRowSaysSo: /нет записей/.test(app.textContent),
+      emptyRowSaysSo: app.textContent.includes(HealthUI.t('quality.noRecords')),
       anchors: app.querySelectorAll('.wall-anchor').length,
       verdicts: app.querySelectorAll('[data-role="wall-verdict"]').length,
       workoutBlock: !!app.querySelector('[data-role="workouts"]'),
@@ -526,7 +531,7 @@ let browser = null;
   check('the interesting facts are capped at five', rest.facts > 0 && rest.facts <= 5);
   check('no year on the page is called the best one', rest.noBestWord);
   check('a year without records gets no bar at all', rest.emptyCells > 0 && rest.emptyWithBar === 0);
-  check('a row with gaps says "нет записей" in words too', rest.emptyRowSaysSo);
+  check('a row with gaps says so in words too', rest.emptyRowSaysSo);
   check('the first and the last complete year are framed', rest.anchors >= 2);
   check('every wall row carries its verdict', rest.verdicts > 0);
   check('sport hours sit in their own block with their own caption', rest.workoutBlock && rest.workoutCaption);
@@ -573,10 +578,10 @@ let browser = null;
   check('every legend item of the stages block explains its stage on hover', await page.evaluate(() => {
     const items = [...HealthUI.control('app').querySelectorAll('[data-role="sleep-stages"] .legend .help')];
     if (items.length !== 4 || !items.every(i => i.dataset.help.length > 40 && i.getAttribute('tabindex') === '0')) return false;
-    const rem = items.find(i => /REM/.test(i.textContent)); if (!/быстрые движения глаз/.test(rem.dataset.help)) return false;
+    const rem = items.find(i => /REM/.test(i.textContent)); if (rem.dataset.help !== HealthUI.t('stage.rem.help')) return false;
     const hidden = getComputedStyle(rem, '::after').display === 'none'; rem.focus();
-    const shown = getComputedStyle(rem, '::after').display === 'block' && getComputedStyle(rem, '::after').content.includes('быстрые'); rem.blur();
-    const noteClean = !/медленный сон/.test(HealthUI.control('app').querySelector('[data-role="sleep-stages"] .chart-note').textContent);
+    const shown = getComputedStyle(rem, '::after').display === 'block' && getComputedStyle(rem, '::after').content.includes(HealthUI.t('stage.rem.help').slice(0, 24)); rem.blur();
+    const noteClean = !new RegExp(HealthUI.t('stage.deep.help').slice(0, 24).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(HealthUI.control('app').querySelector('[data-role="sleep-stages"] .chart-note').textContent);
     return hidden && shown && noteClean;
   }));
   await page.click('[data-tab="story"]');
@@ -726,7 +731,7 @@ let browser = null;
   const feed = async file => { await page.evaluate(() => HealthUI.dropToasts(true)); await page.setInputFiles('[data-ui="archiveFile"]', file); await settled(); };
   await feed({ name: 'fake_archive.zip', mimeType: 'application/zip', buffer: fs.readFileSync(FAKE) });
   const demoMark = await page.evaluate(() => ({ isDemo: HealthUI.state().isDemo, period: HealthUI.control('periodTitle').textContent }));
-  check('the fake archive marks the page as demo data in plain words', demoMark.isDemo === true && /Демонстрационные данные/.test(demoMark.period));
+  check('the fake archive marks the page as demo data in plain words', demoMark.isDemo === true && demoMark.period.includes(TX['period.demo']));
   await feed(archiveOf(healthXml()));
   const opened = await page.evaluate(() => ({
     isDemo: HealthUI.state().isDemo,
@@ -738,7 +743,7 @@ let browser = null;
     progress: HealthUI.control('archiveProgress').className.includes('hidden'),
   }));
   check('an archive opened in the page replaces the previous set', opened.isDemo === false && opened.fromArchive === true);
-  check('the demo wording disappears once another archive is loaded', !/Демонстрационные/.test(opened.period));
+  check('the demo wording disappears once another archive is loaded', !opened.period.includes(TX['period.demo']));
   check('a notification carries its dot indicator, round and coloured',
     await page.evaluate(() => { const d = HealthUI.control('alert').querySelector('[data-role="toast"] .toast-dot'); if (!d) return false; const r = d.getBoundingClientRect(); return Math.abs(r.width - r.height) < 0.5 && r.width > 6; }));
   check('the message about the archive is a notification, not raw markup',
@@ -760,11 +765,11 @@ let browser = null;
   const before = await page.evaluate(() => HealthUI.state().main.monthly.length);
   await feed({ name: 'export.zip', mimeType: 'application/zip', buffer: Buffer.from('not a zip at all') });
   const notZip = await page.evaluate(() => ({ text: HealthUI.control('alert').textContent, rows: HealthUI.state().main.monthly.length }));
-  check('a file that is not a zip is refused in our own words', /повреждён или это не zip/.test(notZip.text) && notZip.rows === before);
+  check('a file that is not a zip is refused in our own words', notZip.text.includes(TX['err.zip.broken']) && notZip.rows === before);
 
   await feed({ name: 'export.zip', mimeType: 'application/zip', buffer: makeZip([{ name: 'readme.txt', data: 'nothing here' }]) });
   const noHealth = await page.evaluate(() => ({ text: HealthUI.control('alert').textContent, rows: HealthUI.state().main.monthly.length }));
-  check('a zip without HealthData is refused in our own words', /не похоже на выгрузку Apple Health/.test(noHealth.text) && noHealth.rows === before);
+  check('a zip without HealthData is refused in our own words', noHealth.text.includes(TX['err.zip.notExport']) && noHealth.rows === before);
   check('an error notification waits to be dismissed instead of vanishing',
     await page.evaluate(() => !!HealthUI.control('alert').querySelector('.toast-error[role="alert"]')));
   await page.evaluate(() => HealthUI.control('alert').querySelector('[data-role="toast-close"]').click());
@@ -783,7 +788,7 @@ let browser = null;
   await page.click('[data-ui="archiveCancel"]');
   await settled();
   const cancelled = await page.evaluate(() => ({ text: HealthUI.control('alert').textContent, rows: HealthUI.state().main.monthly.length }));
-  check('cancelling leaves the previous data in place', /отменено/i.test(cancelled.text) && cancelled.rows === marker);
+  check('cancelling leaves the previous data in place', rx('msg.cancelledKept', 'msg.cancelledEmpty').test(cancelled.text) && cancelled.rows === marker);
   await reload();
 
   // ——— Графики: ширина карточки, легенда, подписи осей, выбор вида. ———
@@ -804,7 +809,7 @@ let browser = null;
   check('the big row fills the card width instead of scrolling sideways', bigRow.fits && !bigRow.sideScroll);
   check('its height follows the width instead of a fixed band', bigRow.taller);
   check('the chart keeps a legend and names both axes',
-    bigRow.legend && /Месяцы/.test(bigRow.axes) && bigRow.axes.split(' ').length >= 2);
+    bigRow.legend && bigRow.axes.includes(TX['chart.axis.months']) && bigRow.axes.split(' ').length >= 2);
   check('the chart offers a choice of line or bars', bigRow.toggle);
 
   // Месяц на оси пишется как здесь принято: месяц, точка, год.
@@ -813,7 +818,7 @@ let browser = null;
     const months = t.filter(v => /^\d{2}\.\d{4}$/.test(v));
     return months.length >= 3 && !t.some(v => /^\d{2}-\d{2}$/.test(v))
       && [...HealthUI.control('app').querySelectorAll('svg.chart .axis-title')]
-           .some(e => /месяц\.год/.test(e.textContent));
+           .some(e => e.textContent.includes(HealthUI.t('chart.axis.months')));
   }));
 
   const switched2 = await page.evaluate(() => {
@@ -928,7 +933,7 @@ let browser = null;
   await page.click('[data-tab="story"]');
   check('no colour literal outside the token blocks', theme.literals.length === 0 && theme.inline === 0);
   check('the theme toggle flips the theme and the paper colour', theme.flipped && theme.back);
-  check('the toggle shows the other theme and names it', theme.icon && /тема/.test(theme.label));
+  check('the toggle shows the other theme and names it', theme.icon && [TX['theme.dark'], TX['theme.light']].includes(theme.label));
   check('the theme is not written to storage', theme.stored === 0);
 
   // Отступы проверяются не выборочно, а сплошь: каждая вкладка, каждый видимый элемент.
@@ -1024,17 +1029,17 @@ let browser = null;
     button: HealthUI.control('reset').className.includes('hidden'),
     hint: HealthUI.control('resetHint').textContent,
   }));
-  check('«Сбросить» on a page with data returns to the start screen',
+  check('the reset button on a page with data returns to the start screen',
     afterReset.main === null && afterReset.start && afterReset.nav && afterReset.tab === 'story');
   check('the embedded set does not come back on its own', afterReset.main === null);
   check('with nothing to reset the button goes away', afterReset.button);
   check('the caption under the button says where it leads',
-    /вернётесь на стартовый экран/.test(afterReset.hint));
+    afterReset.hint.includes(TX['ui.resetHint']));
   await reload();
-  check('on a page with data the header shows «Сбросить» in the error colour',
+  check('on a page with data the header shows the reset button in the error colour',
     await page.evaluate(() => {
       const b = HealthUI.control('reset');
-      return !b.className.includes('hidden') && b.textContent.trim() === 'Сбросить'
+      return !b.className.includes('hidden') && b.textContent.trim() === HealthUI.t('ui.reset')
         && getComputedStyle(b).backgroundColor === 'rgb(200, 68, 45)';
     }));
 
@@ -1104,7 +1109,7 @@ let browser = null;
   const feedEmpty = async file => { await empty.evaluate(() => HealthUI.dropToasts(true)); await empty.setInputFiles('[data-ui="archiveFile"]', file); await settledEmpty(); };
   await feedEmpty({ name: 'export.zip', mimeType: 'application/zip', buffer: Buffer.from('not a zip at all') });
   check('a bad file on the empty page returns to the start with our own words',
-    await empty.evaluate(() => /не zip/.test(HealthUI.control('alert').textContent) && HealthUI.state().main === null && !HealthUI.control('start').className.includes('hidden')));
+    await empty.evaluate(() => HealthUI.control('alert').textContent.includes(HealthUI.t('err.zip.broken')) && HealthUI.state().main === null && !HealthUI.control('start').className.includes('hidden')));
 
   // Экран чтения: год листается от года рождения, лента лет, этап словами, без процентов.
   await empty.evaluate(() => HealthUI.dropToasts(true));
@@ -1118,11 +1123,11 @@ let browser = null;
   check('while reading, the start screen gives way to the loading screen', reading.start);
   check('the loading screen shows a year, not a percentage', /^\d{4}$/.test(reading.year) && !reading.percent);
   check('the ribbon runs from the year of birth to this year', reading.first === '1988' && reading.chips === new Date().getFullYear() - 1988 + 1);
-  check('the stage is named in words', /Открываю архив|Читаю записи|Свожу дни и месяцы/.test(reading.stage));
+  check('the stage is named in words', rx('load.stage.open', 'load.stage.read', 'load.stage.fold').test(reading.stage));
   await empty.click('[data-ui="archiveCancel"]');
   await settledEmpty();
   check('cancelling on the empty page returns to the start with nothing loaded',
-    await empty.evaluate(() => /Ничего не загружено/.test(HealthUI.control('alert').textContent) && HealthUI.state().main === null && !HealthUI.control('start').className.includes('hidden')));
+    await empty.evaluate(() => HealthUI.control('alert').textContent.includes(HealthUI.t('msg.cancelledEmpty')) && HealthUI.state().main === null && !HealthUI.control('start').className.includes('hidden')));
 
   // Маленький архив читается за доли секунды: экран чтения обязан всё равно прожить
   // три секунды, иначе лента лет мелькает и человек не понимает, что произошло.
@@ -1147,10 +1152,10 @@ let browser = null;
   await empty.click('[data-ui="archiveCancel"]');
   await settledEmpty();
   check('cancelling during the ribbon discards what was read',
-    await empty.evaluate(() => /Чтение отменено/.test(HealthUI.control('alert').textContent) && !HealthUI.control('start').className.includes('hidden')));
+    await empty.evaluate(() => [HealthUI.t('msg.cancelledKept'), HealthUI.t('msg.cancelledEmpty')].some(m => HealthUI.control('alert').textContent.includes(m)) && !HealthUI.control('start').className.includes('hidden')));
   await feedEmpty({ name: 'fake_archive.zip', mimeType: 'application/zip', buffer: fs.readFileSync(FAKE) });
   check('the fake archive is marked as demo data on the empty page too',
-    await empty.evaluate(() => HealthUI.state().isDemo === true && /Демонстрационные данные/.test(HealthUI.control('periodTitle').textContent)));
+    await empty.evaluate(() => HealthUI.state().isDemo === true && HealthUI.control('periodTitle').textContent.includes(HealthUI.t('period.demo'))));
   check('the empty page carries the language button too',
     await empty.evaluate(() => HealthUI.control('lang').textContent.trim() === 'EN' && document.documentElement.lang === 'ru'));
   check('the empty page raised no errors', emptyErrors.length === 0);

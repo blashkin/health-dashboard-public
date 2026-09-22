@@ -2,14 +2,14 @@
 // что собирает команда build. Эталон — Python; расхождение ловит tests/test_archive_equivalence.py.
 // Без библиотек и без сети: только Blob, DecompressionStream и TextDecoder.
 // Ничего не записывается: ни localStorage, ни IndexedDB. Данные живут до закрытия вкладки.
+// Ядро читается и вне страницы (прогон в node), где словаря интерфейса нет:
+// там сообщение остаётся ключом, а код ошибки — тот же.
+const say=key=>typeof t==='function'?t(key):key;
 const HealthArchive=(()=>{
 'use strict';
 
 class ArchiveError extends Error{constructor(code,message){super(message);this.code=code}}
 const fail=(code,message)=>{throw new ArchiveError(code,message)};
-const NOT_EXPORT='Это не похоже на выгрузку Apple Health: внутри архива нет файла с данными.';
-const BROKEN='Архив не читается: похоже, файл повреждён или это не zip.';
-const OLD='Браузер слишком старый для чтения архива. Обновите его или соберите дашборд командой build.';
 
 // --- Календарь без Date: часовой пояс браузера не должен влиять на результат. ---------------
 // Смещение записи берётся из самой записи, как в Python (datetime с фиксированным смещением).
@@ -198,15 +198,15 @@ async function centralDirectory(blob){
  const tail=new DataView(await blob.slice(blob.size-tailSize).arrayBuffer());
  let eocd=-1;
  for(let i=tailSize-22;i>=0;i--)if(u32(tail,i)===0x06054b50){eocd=i;break}
- if(eocd<0)fail('broken',BROKEN);
+ if(eocd<0)fail('broken',say('err.zip.broken'));
  let count=u16(tail,eocd+10),size=u32(tail,eocd+12),offset=u32(tail,eocd+16);
  if(count===0xffff||size===0xffffffff||offset===0xffffffff){
   // zip64: выгрузка может быть больше 4 ГБ.
   const loc=eocd-20;
-  if(loc<0||u32(tail,loc)!==0x07064b50)fail('broken',BROKEN);
+  if(loc<0||u32(tail,loc)!==0x07064b50)fail('broken',say('err.zip.broken'));
   const at=u64(tail,loc+8);
   const z=new DataView(await blob.slice(at,at+56).arrayBuffer());
-  if(u32(z,0)!==0x06064b50)fail('broken',BROKEN);
+  if(u32(z,0)!==0x06064b50)fail('broken',say('err.zip.broken'));
   count=u64(z,32);size=u64(z,40);offset=u64(z,48);
  }
  const dv=new DataView(await blob.slice(offset,offset+size).arrayBuffer());
@@ -231,18 +231,18 @@ async function centralDirectory(blob){
   entries.push(e);
   p=extraEnd+commentLen;
  }
- if(!entries.length)fail('broken',BROKEN);
+ if(!entries.length)fail('broken',say('err.zip.broken'));
  return entries;
 }
 
 async function entryStream(blob,entry){
  const head=new DataView(await blob.slice(entry.offset,entry.offset+30).arrayBuffer());
- if(u32(head,0)!==0x04034b50)fail('broken',BROKEN);
+ if(u32(head,0)!==0x04034b50)fail('broken',say('err.zip.broken'));
  const start=entry.offset+30+u16(head,26)+u16(head,28);
  const stream=blob.slice(start,start+entry.csize).stream();
  if(entry.method===0)return stream;
- if(entry.method!==8)fail('broken',BROKEN);
- if(typeof DecompressionStream!=='function')fail('old',OLD);
+ if(entry.method!==8)fail('broken',say('err.zip.broken'));
+ if(typeof DecompressionStream!=='function')fail('old',say('err.zip.old'));
  return stream.pipeThrough(new DecompressionStream('deflate-raw'));
 }
 
@@ -415,7 +415,7 @@ async function findHealthXml(blob,entries){
    }
   }
  }
- if(matches.length!==1)fail('not-export',NOT_EXPORT);
+ if(matches.length!==1)fail('not-export',say('err.zip.notExport'));
  return matches[0];
 }
 
@@ -716,8 +716,8 @@ async function read(blob,opts){
  opts=opts||{};
  // Проверяется не только наличие класса, но и сам формат: в Chrome до 103 класс уже был,
  // а 'deflate-raw' ещё нет, и конструктор бросал бы TypeError вместо понятного отказа.
- if(typeof TextDecoder!=='function')fail('old',OLD);
- try{new DecompressionStream('deflate-raw')}catch(e){fail('old',OLD)}
+ if(typeof TextDecoder!=='function')fail('old',say('err.zip.old'));
+ try{new DecompressionStream('deflate-raw')}catch(e){fail('old',say('err.zip.old'))}
  const entries=await centralDirectory(blob);
  const entry=await findHealthXml(blob,entries);
  const got=await collect(blob,entry,opts);
