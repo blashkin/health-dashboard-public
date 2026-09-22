@@ -520,6 +520,20 @@ let browser = null;
   check('the first and the last complete year are framed', rest.anchors >= 2);
   check('every wall row carries its verdict', rest.verdicts > 0);
   check('sport hours sit in their own block with their own caption', rest.workoutBlock && rest.workoutCaption);
+
+  // Доля вида спорта обязана стоять при своём названии. Раньше её колонка уезжала
+  // к противоположному краю ячейки, и у левой диаграммы проценты читались как числа правой.
+  await page.click('[data-tab="workouts"]');
+  check('the share of a sport stands next to its name, not at the far edge', await page.evaluate(() => {
+    const rows = [...HealthUI.control('app').querySelectorAll('.pie-legend button')];
+    if (!rows.length) return false;
+    return rows.every(r => {
+      const nameEl = r.querySelector('span'), pct = r.querySelector('b');
+      if (!nameEl || !pct) return false;
+      return pct.getBoundingClientRect().left - nameEl.getBoundingClientRect().right < 40;
+    });
+  }));
+  await page.click('[data-tab="story"]');
   check('moderate and vigorous minutes are not added together', rest.noSummedIntensity);
   check('the big chart offers a choice of metric', rest.chips >= 3);
 
@@ -532,30 +546,31 @@ let browser = null;
   });
   check('a chip switches the big chart', switched === true);
 
-  // The two fields feed the vo2max and sleep norms. They have to work while you type:
-  // a field that only reacts once you click away looks broken.
+  // Год рождения и пол спрашиваются только на стартовом экране; в «Главном» полей больше нет.
+  // Блок норм обязан сказать словами, на чём он сопоставлен и почему не сопоставлен.
+  const whoUnknown = await page.evaluate(() => {
+    HealthUI.setState({ birthYear: null, sex: null });
+    HealthUI.render();
+    const app = HealthUI.control('app');
+    return { fields: !!app.querySelector('[data-ui="storyBirth"]') || !!app.querySelector('[data-ui="storySex"]'),
+      edit: !!app.querySelector('[data-ui="storyEditWho"]'),
+      note: (app.querySelector('[data-role="story-who"]') || {}).textContent || '' };
+  });
+  check('the story tab carries no fields of its own', !whoUnknown.fields && !whoUnknown.edit);
+  check('without a year and a sex the norms say so in words',
+    /не заданы/.test(whoUnknown.note) && /стартовом экране/.test(whoUnknown.note));
+
   const typed = await page.evaluate(() => {
-    const el = HealthUI.control('storyBirth');
-    el.focus(); el.value = '1980';
-    el.dispatchEvent(new Event('input', { bubbles: true }));
-    const kept = document.activeElement === HealthUI.control('storyBirth');
-    const half = HealthUI.control('storyBirth');
-    half.value = '19805';
-    half.dispatchEvent(new Event('input', { bubbles: true }));
-    const textKept = HealthUI.control('storyBirth').value === '19805';
-    const back = HealthUI.control('storyBirth');
-    back.value = '1980'; back.dispatchEvent(new Event('input', { bubbles: true }));
-    const sex = HealthUI.control('storySex');
-    sex.value = 'm'; sex.dispatchEvent(new Event('change', { bubbles: true }));
+    HealthUI.setState({ birthYear: 1980, sex: 'm' });
+    HealthUI.render();
     const app = HealthUI.control('app');
     const blocks = [...app.querySelectorAll('[data-role="norm"]')].map(n => n.textContent);
-    return { kept, textKept, year: HealthUI.state().birthYear,
+    return { note: (app.querySelector('[data-role="story-who"]') || {}).textContent || '',
       percentile: blocks.some(t => /перцентил/.test(t)) };
   });
-  check('the year of birth works while it is typed', typed.year === 1980);
-  check('typing does not steal the caret out of the field', typed.kept);
-  check('a half-typed year does not wipe what you wrote', typed.textKept);
   check('with a year and a sex the vo2max block names a percentile', typed.percentile);
+  check('the norms name the year and the sex they were matched on',
+    /1980/.test(typed.note) && /мужской/.test(typed.note));
   await page.evaluate(() => { HealthUI.setState({ birthYear: null, sex: null, birthText: '' }); HealthUI.render(); });
 
   // The checklist asks for this one by name: at phone width the page must not slide sideways.
@@ -692,6 +707,172 @@ let browser = null;
   check('cancelling leaves the previous data in place', /отменено/i.test(cancelled.text) && cancelled.rows === marker);
   await reload();
 
+  // ——— Графики: ширина карточки, легенда, подписи осей, выбор вида. ———
+  await page.click('[data-tab="story"]');
+  const bigRow = await page.evaluate(() => {
+    const svg = HealthUI.control('app').querySelector('svg.chart');
+    const card = svg.closest('.panel');
+    const box = svg.getBoundingClientRect(), inner = card.getBoundingClientRect();
+    const pad = parseFloat(getComputedStyle(card).paddingLeft);
+    const room = inner.width - 2 * pad;
+    return { fits: box.width <= room + 1 && box.width >= room * 0.98,
+      taller: box.height > 200,
+      sideScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      legend: !!HealthUI.control('app').querySelector('.chart-legend'),
+      axes: [...svg.querySelectorAll('.axis-title')].map(t => t.textContent).join(' '),
+      toggle: !!HealthUI.control('app').querySelector('[data-chart-kind]') };
+  });
+  check('the big row fills the card width instead of scrolling sideways', bigRow.fits && !bigRow.sideScroll);
+  check('its height follows the width instead of a fixed band', bigRow.taller);
+  check('the chart keeps a legend and names both axes',
+    bigRow.legend && /Месяцы/.test(bigRow.axes) && bigRow.axes.split(' ').length >= 2);
+  check('the chart offers a choice of line or bars', bigRow.toggle);
+
+  // Месяц на оси пишется как здесь принято: месяц, точка, год.
+  check('months on the axis read month-dot-year', await page.evaluate(() => {
+    const t = [...HealthUI.control('app').querySelectorAll('svg.chart .axis')].map(e => e.textContent);
+    const months = t.filter(v => /^\d{2}\.\d{4}$/.test(v));
+    return months.length >= 3 && !t.some(v => /^\d{2}-\d{2}$/.test(v))
+      && [...HealthUI.control('app').querySelectorAll('svg.chart .axis-title')]
+           .some(e => /месяц\.год/.test(e.textContent));
+  }));
+
+  const switched2 = await page.evaluate(() => {
+    const before = !!HealthUI.control('app').querySelector('[data-role="line"]');
+    const sel = HealthUI.control('app').querySelector('[data-chart-kind]');
+    sel.value = 'bar'; sel.dispatchEvent(new Event('change', { bubbles: true }));
+    const app = HealthUI.control('app');
+    return { before, bars: app.querySelectorAll('[data-role="bar"]').length,
+      line: !!app.querySelector('[data-role="line"]'),
+      kept: HealthUI.control('app').querySelector('[data-chart-kind]').value };
+  });
+  check('switching to bars replaces the line with bars',
+    switched2.before && switched2.bars > 0 && !switched2.line && switched2.kept === 'bar');
+  await page.evaluate(() => { HealthUI.setState({ chartKind: {} }); HealthUI.render(); });
+
+  // Пульс покоя — месячная оценка, а не точка на непрерывной кривой, и открывается столбиками.
+  await page.click('[data-tab="heart"]');
+  check('resting heart rate opens as bars without being asked', await page.evaluate(() =>
+    HealthUI.control('app').querySelectorAll('[data-role="bar"]').length > 0
+    && !HealthUI.control('app').querySelector('[data-role="line"]')));
+
+  await page.click('[data-tab="season"]');
+  check('seasonality fills the card too and keeps its four-year legend', await page.evaluate(() => {
+    const svg = HealthUI.control('app').querySelector('svg.chart'), card = svg.closest('.panel');
+    const pad = parseFloat(getComputedStyle(card).paddingLeft);
+    return svg.getBoundingClientRect().width >= (card.getBoundingClientRect().width - 2 * pad) * 0.98
+      && HealthUI.control('app').querySelectorAll('.chart-legend span').length >= 2
+      && !!HealthUI.control('app').querySelector('[data-chart-kind]');
+  }));
+
+  // ——— Один горизонтальный край на всё и одни отступы внутри карточек. ———
+  const edges = await page.evaluate(() => {
+    const r = s => { const e = document.querySelector(s); const b = e.getBoundingClientRect();
+      return [Math.round(b.left), Math.round(b.right)] };
+    const rows = [r('.top'), r('.nav'), r('[data-ui="controls"]'), r('main .panel'),
+      [r('[data-ui="reset"]')[0], r('[data-ui="reset"]')[1]], r('[data-ui="resetHint"]'), r('#preset')];
+    const left = r('.top')[0], right = r('.top')[1];
+    return { rightOk: rows.every(x => Math.abs(x[1] - right) <= 1),
+      leftOk: [r('.nav'), r('[data-ui="controls"]'), r('main .panel')].every(x => Math.abs(x[0] - left) <= 1),
+      sideScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth };
+  });
+  check('the button, its caption, the rules, the period selects and the cards share one right edge', edges.rightOk);
+  check('and one left edge', edges.leftOk);
+  check('no element pushes the page sideways', !edges.sideScroll);
+
+  const padding = await page.evaluate(() => {
+    const box = el => { const c = getComputedStyle(el); return [c.paddingTop, c.paddingRight, c.paddingBottom, c.paddingLeft].join(' ') };
+    const scale = ['4px', '8px', '12px', '16px', '24px', '32px', '48px', '0px'];
+    const cards = [...document.querySelectorAll('main .panel, main .card, main .chip, main .norm')];
+    const boxes = new Set(cards.map(box));
+    return { one: boxes.size === 1, value: [...boxes][0],
+      onScale: cards.every(el => box(el).split(' ').every(v => scale.includes(v))),
+      tokens: scale.slice(0, 7).every((v, i) => getComputedStyle(document.documentElement).getPropertyValue('--s-' + (i + 1)).trim() === v) };
+  });
+  check('the spacing scale is in the tokens', padding.tokens);
+
+  // Отступы проверяются не выборочно, а сплошь: каждая вкладка, каждый видимый элемент.
+  // Ненулевое значение padding / margin / gap обязано совпадать со ступенью шкалы.
+  // Нутро SVG и строчные элементы пропускаются: там расстояния задаёт текст.
+  const TABS = ['story','overview','activity','workouts','heart','sleep','season','quality','reconcile'];
+  const strays = [], dots = [];
+  for (const tab of TABS) {
+    await page.click(`[data-tab="${tab}"]`);
+    const found = await page.evaluate(() => {
+      const scale = [4, 8, 12, 16, 24, 32, 48];
+      const ok = v => { const n = parseFloat(v); return !n || scale.includes(Math.round(n * 10) / 10) };
+      const name = el => el.tagName.toLowerCase() + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/)[0] : '');
+      const out = [];
+      const roots = ['header', '[data-ui="nav"]', '[data-ui="controls"]', '[data-ui="app"]', 'footer']
+        .map(s => document.querySelector(s));
+      for (const root of roots) {
+        if (!root || getComputedStyle(root).display === 'none') continue;
+        for (const el of [root, ...root.querySelectorAll('*')]) {
+          if (el.ownerSVGElement || el.tagName.toLowerCase() === 'option') continue;
+          const c = getComputedStyle(el);
+          if (c.display === 'none' || c.display === 'inline') continue;
+          for (const prop of ['paddingTop','paddingRight','paddingBottom','paddingLeft',
+                              'marginTop','marginRight','marginBottom','marginLeft','rowGap','columnGap']) {
+            const v = c[prop];
+            if (v && v !== 'normal' && !ok(v)) out.push(prop + '=' + v + ' on ' + name(el));
+          }
+        }
+      }
+      return [...new Set(out)];
+    });
+    for (const f of found) strays.push(tab + ': ' + f);
+    // «зан.» уже кончается точкой: строка «Всего: 3 413 зан..» ловится здесь.
+    const doubled = await page.evaluate(() => {
+      const t = HealthUI.control('app').textContent;
+      const m = t.match(/\S*\.\.(?!\.)\S*/g);
+      return m ? [...new Set(m)] : [];
+    });
+    for (const d of doubled) dots.push(tab + ': ' + d);
+  }
+  check('every padding, margin and gap on every tab is a step off the scale', strays.length === 0);
+  check('no unit is printed with two full stops after it', dots.length === 0);
+  if (dots.length) console.log([...new Set(dots)].join('\n'));
+  if (strays.length) console.log([...new Set(strays)].slice(0, 20).join('\n'));
+
+  // Один размер у заголовка раздела, стоит он рядом с выбором показателя или сам по себе.
+  await page.click('[data-tab="quality"]');
+  check('both halves of a split screen title at the same size', await page.evaluate(() => {
+    const hs = [...HealthUI.control('app').querySelectorAll('.panel > h1, .sectionhead > h1')];
+    return hs.length >= 2 && new Set(hs.map(h => getComputedStyle(h).fontSize)).size === 1;
+  }));
+
+  check('every card has the same inner padding, and it is on the scale', padding.one && padding.onScale);
+
+  // Ряд карточек кончался раньше панели под ним и упирался в неё без зазора.
+  await page.click('[data-tab="overview"]');
+  const cardRow = await page.evaluate(() => {
+    const grid = document.querySelector('main .grid'), next = grid.nextElementSibling;
+    const g = grid.getBoundingClientRect(), n = next.getBoundingClientRect();
+    const scale = [4, 8, 12, 16, 24, 32, 48];
+    return { sameRight: Math.abs(g.right - n.right) <= 1, sameLeft: Math.abs(g.left - n.left) <= 1,
+      gap: Math.round(n.top - g.bottom) };
+  });
+  check('the row of cards reaches the same edges as the block below it',
+    cardRow.sameLeft && cardRow.sameRight);
+  check('and the space between them is a step off the scale',
+    [4, 8, 12, 16, 24, 32, 48].includes(cardRow.gap));
+
+  // ——— Пары месяцев: числа остаются швом, на экран не выводятся. ———
+  await page.click('[data-tab="activity"]');
+  check('the list of month pairs is off the screen', await page.evaluate(() =>
+    !/Пары месяцев/.test(HealthUI.control('app').textContent)));
+  check('but the pairs themselves are still reachable through the seam', await page.evaluate(() =>
+    Array.isArray(HealthUI.comparePairs('steps', false))));
+
+  // ——— Столбики в клетках данных — самое мелкое скругление. ———
+  await page.click('[data-tab="story"]');
+  check('bars inside the year cells use the smallest corner', await page.evaluate(() => {
+    const bars = [...HealthUI.control('app').querySelectorAll('.wall-bar')];
+    const small = getComputedStyle(document.documentElement).getPropertyValue('--r-s').trim();
+    return bars.length > 0 && bars.every(b => getComputedStyle(b).borderRadius === small);
+  }));
+  await reload();
+
   // Кнопка в шапке одна и значит одно и то же на любой странице: уйти на стартовый экран.
   // Встроенный в build набор после этого не возвращается — только новым файлом.
   await page.click('[data-tab="overview"]');
@@ -787,9 +968,8 @@ let browser = null;
     intro: !!HealthUI.control('app').querySelector('[data-ui="storyBirth"]'),
   }));
   check('after reading, the dashboard opens on the plain-language section', ready.tab === 'story' && ready.start && ready.loading && (await visible('nav')));
-  check('the story tab shows the two fields as one line once they are known', /1988/.test(ready.who) && /мужской/.test(ready.who) && !ready.intro);
-  await empty.click('[data-ui="storyEditWho"]');
-  check('«изменить» brings the two fields back', await empty.evaluate(() => !!HealthUI.control('app').querySelector('[data-ui="storyBirth"]')));
+  check('what was typed on the start screen is what the norms are matched on',
+    /1988/.test(ready.who) && /мужской/.test(ready.who) && !ready.intro);
   await feedEmpty({ name: 'fake_archive.zip', mimeType: 'application/zip', buffer: fs.readFileSync(FAKE) });
   check('the fake archive is marked as demo data on the empty page too',
     await empty.evaluate(() => HealthUI.state().isDemo === true && /Демонстрационные данные/.test(HealthUI.control('periodTitle').textContent)));

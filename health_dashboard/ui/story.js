@@ -378,22 +378,6 @@ function unitFor(metric,v){
 const TONE_WORD={good:'хорошо',watch:'обратить внимание',neutral:'нейтрально'};
 
 // ——— Разметка обложки ————————————————————————————————————————————————————————
-function storyIntro(){
- // В поле хранится набранный текст, а в state.birthYear — разобранное из него число.
- // Иначе на середине правки («19805») поле очистилось бы прямо под руками.
- let sex=storySex(),by=state.birthText==null?(state.birthYear==null?'':String(state.birthYear)):state.birthText;
- // Оба поля уже заданы (на стартовом экране или здесь) — блок сворачивается в строку.
- if(sex&&state.birthYear&&!state.editWho)
-  return `<p class="story-who" data-role="story-who">Год рождения ${esc(state.birthYear)} · ${sex==='m'?'мужской':'женский'} · <button type="button" class="linklike" data-ui="storyEditWho">изменить</button></p>`;
- return `<section class="panel story-intro"><h1>Два поля для следующего блока</h1><div class="story-fields">
-  <div class="field"><label for="storyBirth">Год рождения</label><input id="storyBirth" data-ui="storyBirth" inputmode="numeric" maxlength="4" placeholder="например, 1980" value="${esc(by)}"></div>
-  <div class="field"><label for="storySex">Пол</label><select id="storySex" data-ui="storySex">
-   <option value="" ${sex?'':'selected'}>не указан</option>
-   <option value="m" ${sex==='m'?'selected':''}>мужской</option>
-   <option value="f" ${sex==='f'?'selected':''}>женский</option></select></div>
-  <p class="chart-note story-why">Нормы VO₂max и сна заданы по возрасту, а VO₂max ещё и по полу: без этих двух полей их не с чем сопоставить. Всё остальное на странице от них не зависит. Страница ничего не сохраняет — закроете её, и поля исчезнут вместе с ней.</p>
- </div></section>`}
-
 function storyCover(){
  let chips=coverChips();
  return `<section class="panel cover"><p class="lede">${esc(coverParagraph())}</p>
@@ -416,24 +400,11 @@ function storyGlossary(){
   <p class="trust">Год — среднее только по дням с записью. Пустая клетка — «не измеряли», а не ноль. Охра — записей мало, среднее шаткое. Пропуск на графике — разрыв линии, а не ноль.</p>
  </details></section>`}
 
-// Перерисовка по «изменено», а не по каждому нажатию клавиши: иначе поле теряет фокус на вводе.
+// Год рождения и пол спрашиваются один раз, на стартовом экране. Здесь их полей нет:
+// после расчёта менять исходные данные посреди готовых чисел — значит пересобирать страницу.
 function bindStory(){
  app.querySelectorAll('[data-ui="storyMetric"]').forEach(b=>b.onclick=()=>{
-  state.storyMetric=b.dataset.metric;render()});
- let b=HealthUI.control('storyBirth');
- if(b)b.oninput=e=>{
-  let v=e.target.value,t=v.trim(),num=Number(t),
-      next=/^\d{4}$/.test(t)&&num>1900&&num<2100?num:null;
-  state.birthText=v;
-  if(next===(state.birthYear??null)){b.value=v;return}
-  state.birthYear=next;render();
-  // Перерисовка заменяет поле целиком, поэтому фокус и каретку возвращаем руками.
-  let again=HealthUI.control('storyBirth');
-  if(again){again.focus();try{again.setSelectionRange(v.length,v.length)}catch{}}};
- let s=HealthUI.control('storySex');
- if(s)s.onchange=e=>{state.sex=e.target.value==='m'||e.target.value==='f'?e.target.value:null;state.editWho=false;render()};
- let w=HealthUI.control('storyEditWho');
- if(w)w.onclick=()=>{state.editWho=true;render()}}
+  state.storyMetric=b.dataset.metric;render()})}
 
 // ——— Было и стало, нормы, источники ——————————————————————————————————————————
 const DEC={steps:0,exercise_min:0,resting_hr:0,vo2max:1,sleep_hours:1};
@@ -531,10 +502,19 @@ function normBlock(metric){
   <p class="disclaimer">Нормы популяционные: они описаны для групп людей, а не для вас лично. Страница не ставит диагноз и не заменяет врача; при симптомах идти к врачу, а не к графику.</p>
  </div>`}
 
+// Часть норм задана по возрасту и полу. Спрашиваются они на стартовом экране, а страница
+// от build собрана сразу с данными и этого экрана не видела: тогда об этом говорится словами,
+// а не молчаливым пропуском строки.
+function storyWhoNote(){
+ let sex=storySex(),by=state.birthYear;
+ if(sex&&by)return `<p class="story-who" data-role="story-who">Нормы, заданные по возрасту и полу, сопоставлены для: год рождения ${esc(by)}, ${sex==='m'?'мужской':'женский'} пол. Эти два поля вводятся на стартовом экране и нигде не сохраняются.</p>`;
+ return `<p class="story-who" data-role="story-who">Год рождения и пол не заданы, поэтому нормы VO₂max и сна здесь не с чем сопоставить: они описаны по возрасту, а VO₂max ещё и по полу. Остальное на странице от них не зависит. Эти два поля спрашиваются на стартовом экране — страница, собранная сразу с данными, его не показывает.</p>`}
+
 function storyNorms(){
  let list=STORY_METRICS.filter(m=>NORMS[m]);
  return `<section class="panel"><h1>Ваши числа и нормы</h1>
   <p class="chart-note">Сравнение идёт по последнему полному году архива. Возле каждого порога и каждого совета стоит номер источника: он ведёт в список внизу страницы.</p>
+  ${storyWhoNote()}
   ${list.map(normBlock).join('')}</section>`}
 
 // ——— Было и стало ————————————————————————————————————————————————————————————
@@ -572,6 +552,9 @@ function storyChange(){
 // ——— Источники ———————————————————————————————————————————————————————————————
 const GROUP_TITLE={steps:'Шаги',exercise_min:'Минуты упражнений',workouts:'Часы тренировок',
  resting_hr:'Пульс покоя',vo2max:'VO₂max',sleep_hours:'Сон'};
+// Точку ставит тот, у кого её ещё нет: «Paluch и соавт.» уже кончается точкой,
+// и в списке источников выходило «Paluch и соавт..».
+const endDot=t=>String(t).endsWith('.')?'':'.';
 function storySources(){
  let groups={};
  for(const [id,s] of Object.entries(SOURCES))(groups[s.group]??=[]).push([id,s]);
@@ -579,7 +562,7 @@ function storySources(){
   <p class="chart-note">Номер в квадратных скобках рядом с нормой ведёт сюда. Адрес напечатан полностью: страница сама в сеть не ходит, переход делает человек, и ссылка должна читаться даже на бумаге.</p>
   ${Object.keys(GROUP_TITLE).filter(g=>groups[g]).map(g=>`<h2>${esc(GROUP_TITLE[g])}</h2>
    <ol class="srclist">${groups[g].map(([id,s])=>`<li id="src-${esc(id)}" value="${SOURCE_NO[id]}">
-    <b>${esc(s.org)}</b>. ${esc(s.title)}.${s.where?' '+esc(s.where)+'.':''} ${esc(s.year)}.
+    <b>${esc(s.org)}</b>${endDot(s.org)} ${esc(s.title)}${endDot(s.title)}${s.where?' '+esc(s.where)+endDot(s.where):''} ${esc(s.year)}.
     <a href="${esc(s.url)}" rel="noopener noreferrer" target="_blank">${esc(s.url)}</a>
     <span class="checked">сверено ${esc(s.checked)}</span></li>`).join('')}</ol>`).join('')}
   <h2>Рабочие пороги страницы, не нормы</h2>
@@ -651,8 +634,8 @@ function storyChart(){
      lbl=NORMS[cur]?NORMS[cur].label:cur;
  return `<section class="panel"><div class="sectionhead"><h1>Один большой ряд</h1></div>
   <div class="chipbar">${opts.map(m=>`<button class="mchip${m===cur?' active':''}" data-ui="storyMetric" data-metric="${esc(m)}" aria-pressed="${m===cur}">${esc(NORMS[m]?NORMS[m].label:m)}</button>`).join('')}</div>
-  <div class="chart-wrap story-chart">${chart(rows,lbl,STORY_UNIT[cur]||'')}</div>
-  <p class="chart-note">По вертикали — ${esc(STORY_UNIT[cur]||'значение')}, среднее по дням с записью, а не сумма за месяц: иначе короткий февраль и месяц с пропусками читались бы как спад. Месяцев в архиве много, поэтому ряд не сжимается в ширину экрана — его можно прокрутить вбок внутри этой рамки.</p>
+  ${chart(rows,lbl,STORY_UNIT[cur]||'',{key:'story',metric:cur})}
+  <p class="chart-note">По вертикали — ${esc(STORY_UNIT[cur]||'значение')}, среднее по дням с записью, а не сумма за месяц: иначе короткий февраль и месяц с пропусками читались бы как спад. Весь ряд помещается в ширину страницы: подписаны не все месяцы, но ни один не обрезан и прокручивать вбок нечего.</p>
   <ul class="notes">${chartNotes(cur).map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
   <p class="chart-note">Точка отсутствует там, где записи нет: линия рвётся, а не падает в ноль.</p></section>`}
 
@@ -774,11 +757,11 @@ function storyWorkouts(){
  </section>`}
 
 function storyTab(){
- return [storyCover(),storyGlossary(),storyChange(),storyIntro(),storyNorms(),
+ return [storyCover(),storyGlossary(),storyChange(),storyNorms(),
   storyChart(),storyFacts(),storyWall(),storyWorkouts(),storySources()].join('')}
 
 // Шов раздела: браузерные проверки держатся за него, а не за разметку.
 const STORY={yearly,yearStatus,horizons,trendVerdict,weeklyMinutes,fullYears,partialYears,
  storyRows,sleepIsWindows,compareTo,percentileBand,bands,zone,weeklyFromDaily,
- coverParagraph,coverChips,storyTrend,seasonNote,chartNotes,storyFactList,wallCells,hrCategory,storyHorizons,unitFor,plural,ruler,refs,normBlock,storyChange,storySources,SOURCE_NO,archDir,rankAmongYears,storyAge,ageInYear,STORY_UNIT,
+ coverParagraph,coverChips,storyWhoNote,storyTrend,seasonNote,chartNotes,storyFactList,wallCells,hrCategory,storyHorizons,unitFor,plural,ruler,refs,normBlock,storyChange,storySources,SOURCE_NO,archDir,rankAmongYears,storyAge,ageInYear,STORY_UNIT,
  NOISE,POLE,STATUS_WORD,STORY_METRICS,SOURCES,NORMS,WORKOUT_NORM,NOISE_NOTE,CHECKED};
