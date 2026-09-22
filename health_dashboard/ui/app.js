@@ -199,7 +199,16 @@ function renderShell(){let has=hasData(),busy=!!archiveJob;for(const n of ['nav'
 // Кнопка в шапке одна и значит одно на всех страницах: уйти на стартовый экран.
 // Пока данных нет, сбрасывать нечего, и её нет тоже.
 HealthUI.control('reset').classList.toggle('hidden',!has);HealthUI.control('start').classList.toggle('hidden',has||busy);HealthUI.control('loading').classList.toggle('hidden',has||!busy);HealthUI.control('resetHint').classList.toggle('hidden',!has||busy);return has}
-function render(){rendering=true;clearAlert();if(!renderShell()){bindStart();rendering=false;return}initControls();let fn={story:storyTab,overview,activity,workouts,heart,sleep,season,quality}[state.tab];HealthUI.control('controls').classList.toggle('hidden',state.tab==='story');app.innerHTML=fn();bindContent();if(state.tab==='story')bindStory();if(state.tab==='overview'){renderOverviewChart();$('#method').textContent=String(state.main.method||'Методика не указана.')}rendering=false}
+// Перерисовка той же вкладки не должна сбрасывать прокрутку: пока разметка меняется, высота
+// блока на миг падает, браузер прижимает страницу вверх, и после смены вида графика человек
+// оказывается в шапке. Высота удерживается на время замены, положение возвращается явно.
+// Смена вкладки — другое дело: там начало страницы и ожидается.
+let renderedTab=null;
+function keepScroll(swap){
+ let same=renderedTab===state.tab,y=window.scrollY,h=app.offsetHeight;renderedTab=state.tab;
+ if(!same){swap();window.scrollTo(0,0);return}
+ app.style.minHeight=h+'px';swap();window.scrollTo(0,y);app.style.minHeight=''}
+function render(){rendering=true;clearAlert();if(!renderShell()){bindStart();rendering=false;return}initControls();let fn={story:storyTab,overview,activity,workouts,heart,sleep,season,quality}[state.tab];HealthUI.control('controls').classList.toggle('hidden',state.tab==='story');keepScroll(()=>{app.innerHTML=fn()});bindContent();if(state.tab==='story')bindStory();if(state.tab==='overview'){renderOverviewChart();$('#method').textContent=String(state.main.method||'Методика не указана.')}rendering=false}
 function renderOverviewChart(){let k=state.metric;if(!activeMetrics().includes(k))k='steps',state.metric=k;let rows=perDayRows(k),a=known[k];$('#mainChart').innerHTML=chart(rows,a[0],a[1]+(PER_DAY.includes(k)?'/день':''),{key:'overview',metric:k});bindChartKind($('#mainChart'));$('#detail').innerHTML=state.detail?detail(state.detail,k):''}
 // Переключатель вида графика живёт в state по ключу графика: у каждого раздела свой,
 // и выбор не разъезжается при переходе между вкладками.

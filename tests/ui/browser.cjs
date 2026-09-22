@@ -398,6 +398,18 @@ let browser = null;
   check('an empty data set shows the invitation instead of empty tabs',
     await page.evaluate(() => !HealthUI.control('start').className.includes('hidden') && getComputedStyle(HealthUI.control('nav')).display === 'none'));
 
+  // Changing how a chart is drawn must not throw the reader back to the top of the page.
+  await reload();
+  await page.click('[data-tab="activity"]');
+  await page.evaluate(() => window.scrollTo(0, 400));
+  await page.waitForTimeout(50);
+  await page.selectOption('[data-chart-kind="activity"]', 'bar');
+  await page.waitForTimeout(100);
+  check('switching the chart type keeps the scroll position', await page.evaluate(() => Math.abs(window.scrollY - 400) < 2));
+  await page.click('[data-tab="heart"]');
+  await page.waitForTimeout(50);
+  check('switching the tab starts at the top', await page.evaluate(() => window.scrollY === 0));
+
   // Smoothing is a per-chart select under the chart and keeps its state across re-renders.
   await reload();
   await page.click('[data-tab="heart"]');
