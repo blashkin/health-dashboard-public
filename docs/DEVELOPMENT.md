@@ -80,7 +80,7 @@ directory, the browser checks build theirs in memory and run on `demo/`.
 itself instead of failing, so a machine without Node still gets a green suite — and a
 smaller one. Do not read that green as proof that the page agrees with Python.
 
-Browser — 128 checks against a page with data. Since `demo` writes an empty page, build
+Browser — 148 checks against a page with data. Since `demo` writes an empty page, build
 one from the fake archive first:
 
 ```sh
@@ -98,8 +98,9 @@ node tests/ui/browser.cjs
 Playwright is resolved from a local install or from `PLAYWRIGHT_MODULE=/path/to/playwright`.
 Chrome is taken through `channel: 'chrome'`; a different binary can be given with
 `CHROME_PATH`. The script takes the dashboard path as its first argument or from
-`HEALTH_DASHBOARD_HTML`, and defaults to `out/demo/dashboard.html` — pass
-`out/check/dashboard.html` for the build above.
+`HEALTH_DASHBOARD_HTML` and defaults to `out/check/dashboard.html`; the empty page is
+the second argument or `HEALTH_DASHBOARD_EMPTY`, default `out/demo/dashboard.html`, with
+`fake_archive.zip` expected beside it.
 
 ## What the test modules are for
 

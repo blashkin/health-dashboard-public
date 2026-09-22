@@ -3,7 +3,11 @@
 // data-role attributes, never through class names or the internal markup: the stage 3
 // overlay replaces those, and the checks have to survive it.
 // Build first:  python3 -m health_dashboard demo -o out/demo
-// Run:          node tests/ui/browser.cjs [path/to/dashboard.html]
+//               python3 -m health_dashboard build out/demo/fake_archive.zip -o out/check
+// Run:          node tests/ui/browser.cjs [out/check/dashboard.html] [out/demo/dashboard.html]
+// The first page carries data (the old checks lean on «Сбросить» bringing it back); the
+// second is the empty page with the start screen, checked at the end. Beside the second
+// one lies fake_archive.zip, the synthetic export that marks the page as demo data.
 // Playwright is resolved from the local install or from PLAYWRIGHT_MODULE=/path/to/playwright.
 // Node is needed for these checks only, never for running the program itself.
 const fs = require('fs'), os = require('os'), path = require('path');
@@ -11,10 +15,14 @@ const { makeZip } = require('./make_zip.cjs');
 
 const REPO = path.resolve(__dirname, '..', '..');
 const DEMO = path.join(REPO, 'demo');
-const DASHBOARD = process.argv[2] || process.env.HEALTH_DASHBOARD_HTML || path.join(REPO, 'out', 'demo', 'dashboard.html');
-if (!fs.existsSync(DASHBOARD)) {
-  console.error('Build not found: ' + DASHBOARD + '\nRun: python3 -m health_dashboard demo -o out/demo');
-  process.exit(2);
+const DASHBOARD = path.resolve(process.argv[2] || process.env.HEALTH_DASHBOARD_HTML || path.join(REPO, 'out', 'check', 'dashboard.html'));
+const EMPTY = path.resolve(process.argv[3] || process.env.HEALTH_DASHBOARD_EMPTY || path.join(REPO, 'out', 'demo', 'dashboard.html'));
+const FAKE = path.join(path.dirname(EMPTY), 'fake_archive.zip');
+for (const [what, file] of [['Build with data', DASHBOARD], ['Empty page', EMPTY], ['Fake archive', FAKE]]) {
+  if (!fs.existsSync(file)) {
+    console.error(what + ' not found: ' + file + '\nRun: python3 -m health_dashboard demo -o out/demo && python3 -m health_dashboard build out/demo/fake_archive.zip -o out/check');
+    process.exit(2);
+  }
 }
 
 const PAYLOAD = '<img src=x onerror="window.__xss=1">';
@@ -376,7 +384,9 @@ let browser = null;
     await page.waitForTimeout(20);
   }
   check('imported file contents do not execute', await page.evaluate(() => window.__xss === undefined));
+  // «Полнота записей» показывает перерывы выбранного показателя: выбираем шаги, где лежит нагрузка.
   await page.click('[data-tab="quality"]');
+  await page.evaluate(() => { HealthUI.setState({ metric: 'steps' }); HealthUI.render(); });
   check('gap fields are shown as text', (await page.textContent('[data-ui="app"]')).includes(PAYLOAD));
 
   // A main import must not bring the demo sleep set back.
@@ -396,15 +406,13 @@ let browser = null;
   await page.click('[data-ui="toggleSleep"]');
   check('imported sleep survives switching back and forth', await page.evaluate(() => Array.isArray(HealthUI.state().sleep?.monthly) && HealthUI.state().sleepMode === 'window'));
 
-  // An empty but valid file must not break the page.
+  // An empty but valid file must not break the page: with nothing to show it falls back to the invitation.
   await page.click('[data-ui="reset"]');
   await page.setInputFiles('[data-ui="mainFile"]', tempJson('empty.json', { sources: {}, monthly: [] }));
   await page.waitForTimeout(50);
-  for (const tab of ['story', 'overview', 'activity', 'season', 'quality', 'reconcile']) {
-    await page.click(`[data-tab="${tab}"]`);
-    await page.waitForTimeout(20);
-  }
   check('empty data set renders without errors', errors.length === 0);
+  check('an empty data set shows the invitation instead of empty tabs',
+    await page.evaluate(() => !HealthUI.control('start').className.includes('hidden') && getComputedStyle(HealthUI.control('nav')).display === 'none'));
 
   // Heart smoothing keeps its state across re-renders.
   await page.click('[data-ui="reset"]');
@@ -618,8 +626,9 @@ let browser = null;
   // Старые сообщения снимаются перед каждой подачей: иначе ожидание примет чужое за ответ.
   const settled = () => page.waitForFunction(() => HealthUI.control('alert').textContent.length > 0, null, { timeout: 60000 });
   const feed = async file => { await page.evaluate(() => HealthUI.dropToasts(true)); await page.setInputFiles('[data-ui="archiveFile"]', file); await settled(); };
-  const demoMark = await page.textContent('[data-ui="periodTitle"]');
-  check('a demo build says so in plain words', /Демонстрационные данные/.test(demoMark));
+  await feed({ name: 'fake_archive.zip', mimeType: 'application/zip', buffer: fs.readFileSync(FAKE) });
+  const demoMark = await page.evaluate(() => ({ isDemo: HealthUI.state().isDemo, period: HealthUI.control('periodTitle').textContent }));
+  check('the fake archive marks the page as demo data in plain words', demoMark.isDemo === true && /Демонстрационные данные/.test(demoMark.period));
   await feed(archiveOf(healthXml()));
   const opened = await page.evaluate(() => ({
     isDemo: HealthUI.state().isDemo,
@@ -630,8 +639,10 @@ let browser = null;
     hint: !HealthUI.control('archiveHint').className.includes('hidden'),
     progress: HealthUI.control('archiveProgress').className.includes('hidden'),
   }));
-  check('an archive opened in the page replaces the demo set', opened.isDemo === false && opened.fromArchive === true);
-  check('the demo wording disappears once real data is loaded', !/Демонстрационные/.test(opened.period));
+  check('an archive opened in the page replaces the previous set', opened.isDemo === false && opened.fromArchive === true);
+  check('the demo wording disappears once another archive is loaded', !/Демонстрационные/.test(opened.period));
+  check('a notification carries its dot indicator, round and coloured',
+    await page.evaluate(() => { const d = HealthUI.control('alert').querySelector('[data-role="toast"] .toast-dot'); if (!d) return false; const r = d.getBoundingClientRect(); return Math.abs(r.width - r.height) < 0.5 && r.width > 6; }));
   check('the message about the archive is a notification, not raw markup',
     await page.evaluate(() => { const t = HealthUI.control('alert').querySelector('[data-role="toast"]'); return !!t && t.querySelector('[data-role="toast-close"]') !== null; }));
   check('the archive produces both definitions from one file', opened.steps === 1 && opened.windows > 0);
@@ -664,7 +675,8 @@ let browser = null;
 
   // Отмена: прежние данные обязаны остаться на месте, а не исчезнуть.
   // Архив нарочно большой, иначе чтение успеет закончиться раньше нажатия.
-  const long = Array.from({ length: 60000 }, (_, i) =>
+  // 250 тысяч записей: меньше страница успевает дочитать раньше, чем дойдёт нажатие.
+  const long = Array.from({ length: 250000 }, (_, i) =>
     `<Record type="HKQuantityTypeIdentifierHeartRate" value="${60 + (i % 20)}" unit="count/min" sourceName="Watch"` +
     ` sourceVersion="1" startDate="2022-06-01 10:00:${String(i % 60).padStart(2, '0')} +0300" endDate="2022-06-01 10:00:${String(i % 60).padStart(2, '0')} +0300"/>`).join('');
   const marker = await page.evaluate(() => HealthUI.state().main.monthly.length);
@@ -679,6 +691,69 @@ let browser = null;
   check('no network requests other than file:', [...schemes].every(s => s === 'file'));
   check('no page errors', errors.length === 0);
   if (errors.length) console.log(errors);
+
+  // ——— Пустая страница: приглашение, чтение с лентой лет, отмена, готовый экран. ———
+  const empty = await browser.newPage();
+  const emptyErrors = [];
+  empty.on('pageerror', e => emptyErrors.push(e.message));
+  empty.on('request', r => schemes.add(r.url().split(':')[0]));
+  await empty.goto('file://' + EMPTY);
+  const visible = sel => empty.evaluate(s => { const el = HealthUI.control(s); return !!el && getComputedStyle(el).display !== 'none'; }, sel);
+  const startState = await empty.evaluate(() => ({
+    main: HealthUI.state().main, start: !HealthUI.control('start').className.includes('hidden'),
+    footer: /github\.com\/blashkin\/health-dashboard-public/.test(HealthUI.control('foot').textContent),
+    fields: !!HealthUI.control('startBirth') && !!HealthUI.control('startSex') && !!HealthUI.control('startOpen'),
+  }));
+  check('the empty page carries no data at all', startState.main === null);
+  check('the empty page opens with the invitation', startState.start && !(await visible('nav')) && !(await visible('app')) && !(await visible('controls')));
+  check('the header keeps no archive button while the start screen is up', !(await visible('openArchive')));
+  check('the start screen offers year of birth, sex and the button', startState.fields);
+  check('the footer names the repository', startState.footer);
+  await empty.fill('[data-ui="startBirth"]', '1988');
+  await empty.selectOption('[data-ui="startSex"]', 'm');
+  check('the start fields land in the same state the story tab reads',
+    await empty.evaluate(() => HealthUI.state().birthYear === 1988 && HealthUI.state().sex === 'm'));
+
+  const settledEmpty = () => empty.waitForFunction(() => HealthUI.control('alert').textContent.length > 0, null, { timeout: 60000 });
+  const feedEmpty = async file => { await empty.evaluate(() => HealthUI.dropToasts(true)); await empty.setInputFiles('[data-ui="archiveFile"]', file); await settledEmpty(); };
+  await feedEmpty({ name: 'export.zip', mimeType: 'application/zip', buffer: Buffer.from('not a zip at all') });
+  check('a bad file on the empty page returns to the start with our own words',
+    await empty.evaluate(() => /не zip/.test(HealthUI.control('alert').textContent) && HealthUI.state().main === null && !HealthUI.control('start').className.includes('hidden')));
+
+  // Экран чтения: год листается от года рождения, лента лет, этап словами, без процентов.
+  await empty.evaluate(() => HealthUI.dropToasts(true));
+  await empty.setInputFiles('[data-ui="archiveFile"]', archiveOf(healthXml(long)));
+  await empty.waitForFunction(() => !HealthUI.control('loading').className.includes('hidden'), null, { timeout: 10000 });
+  const reading = await empty.evaluate(() => ({
+    year: HealthUI.control('loadYear').textContent, stage: HealthUI.control('loadStage').textContent,
+    chips: HealthUI.control('loadYears').children.length, first: HealthUI.control('loadYears').firstElementChild.textContent,
+    start: HealthUI.control('start').className.includes('hidden'), percent: /%/.test(document.querySelector('[data-ui="archivePercent"]').textContent),
+  }));
+  check('while reading, the start screen gives way to the loading screen', reading.start);
+  check('the loading screen shows a year, not a percentage', /^\d{4}$/.test(reading.year) && !reading.percent);
+  check('the ribbon runs from the year of birth to this year', reading.first === '1988' && reading.chips === new Date().getFullYear() - 1988 + 1);
+  check('the stage is named in words', /Открываю архив|Читаю записи|Свожу дни и месяцы/.test(reading.stage));
+  await empty.click('[data-ui="archiveCancel"]');
+  await settledEmpty();
+  check('cancelling on the empty page returns to the start with nothing loaded',
+    await empty.evaluate(() => /Ничего не загружено/.test(HealthUI.control('alert').textContent) && HealthUI.state().main === null && !HealthUI.control('start').className.includes('hidden')));
+
+  await feedEmpty(archiveOf(healthXml()));
+  const ready = await empty.evaluate(() => ({
+    tab: HealthUI.state().tab, start: HealthUI.control('start').className.includes('hidden'), loading: HealthUI.control('loading').className.includes('hidden'),
+    who: (HealthUI.control('app').querySelector('[data-role="story-who"]') || {}).textContent || '',
+    intro: !!HealthUI.control('app').querySelector('[data-ui="storyBirth"]'),
+  }));
+  check('after reading, the dashboard opens on the plain-language section', ready.tab === 'story' && ready.start && ready.loading && (await visible('nav')));
+  check('the story tab shows the two fields as one line once they are known', /1988/.test(ready.who) && /мужской/.test(ready.who) && !ready.intro);
+  await empty.click('[data-ui="storyEditWho"]');
+  check('«изменить» brings the two fields back', await empty.evaluate(() => !!HealthUI.control('app').querySelector('[data-ui="storyBirth"]')));
+  await feedEmpty({ name: 'fake_archive.zip', mimeType: 'application/zip', buffer: fs.readFileSync(FAKE) });
+  check('the fake archive is marked as demo data on the empty page too',
+    await empty.evaluate(() => HealthUI.state().isDemo === true && /Демонстрационные данные/.test(HealthUI.control('periodTitle').textContent)));
+  check('the empty page raised no errors', emptyErrors.length === 0);
+  if (emptyErrors.length) console.log(emptyErrors);
+  check('still no network requests other than file:', [...schemes].every(s => s === 'file'));
   console.log(failures ? `\n${failures} check(s) failed.` : '\nAll browser checks passed.');
   process.exitCode = failures ? 1 : 0;
 })().catch(e => { console.error(e.message); process.exitCode = 2; })
