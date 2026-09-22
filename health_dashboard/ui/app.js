@@ -89,15 +89,16 @@ function compareBlock(){let r=range();if(!r)return'';let k=state.metric,incl=!!s
 function hasData(){return !!(state.main&&Array.isArray(state.main.monthly)&&state.main.monthly.length)}
 // Без данных страница показывает приглашение или экран чтения; вкладки и фильтры спрятаны.
 function renderShell(){let has=hasData(),busy=!!archiveJob;for(const n of ['nav','controls','app','periodTitle'])HealthUI.control(n).classList.toggle('hidden',!has);
-// Страница со встроенными данными может вернуться к ним с любого экрана.
-HealthUI.control('reset').classList.toggle('hidden',!has&&!EMBEDDED_MAIN);HealthUI.control('start').classList.toggle('hidden',has||busy);HealthUI.control('loading').classList.toggle('hidden',has||!busy);HealthUI.control('openArchive').classList.toggle('hidden',!has);HealthUI.control('archiveHint').classList.toggle('hidden',!has||busy);return has}
+// Кнопка в шапке одна и значит одно на всех страницах: уйти на стартовый экран.
+// Пока данных нет, сбрасывать нечего, и её нет тоже.
+HealthUI.control('reset').classList.toggle('hidden',!has);HealthUI.control('start').classList.toggle('hidden',has||busy);HealthUI.control('loading').classList.toggle('hidden',has||!busy);HealthUI.control('resetHint').classList.toggle('hidden',!has||busy);return has}
 function render(){rendering=true;clearAlert();if(!renderShell()){bindStart();rendering=false;return}initControls();let fn={story:storyTab,overview,activity,workouts,heart,sleep,season,quality,reconcile}[state.tab];HealthUI.control('controls').classList.toggle('hidden',state.tab==='story');app.innerHTML=fn();bindContent();if(state.tab==='story')bindStory();if(state.tab==='overview'){renderOverviewChart();$('#method').textContent=String(state.main.method||'Методика не указана.')}rendering=false}
 function renderOverviewChart(){let k=state.metric;if(!activeMetrics().includes(k))k='steps',state.metric=k;let rows=perDayRows(k),a=known[k];$('#mainChart').innerHTML=chart(rows,a[0],a[1]+(PER_DAY.includes(k)?'/день':''));$('#detail').innerHTML=state.detail?detail(state.detail,k):''}
 function bindContent(){app.querySelectorAll('[data-pick],[data-sport]').forEach(el=>{let go=()=>{state.metric=el.dataset.pick||el.dataset.sport;state.detail=null;render()};el.onclick=go;if(el.tagName!=='BUTTON')el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}}});let m=$('#metric');if(m)m.onchange=e=>{state.metric=e.target.value;render()};app.querySelectorAll('[data-month],[data-rowmonth]').forEach(el=>{let go=()=>{state.detail=el.dataset.month||el.dataset.rowmonth;render()};el.onclick=go;el.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}}});app.querySelectorAll('[data-qmonth]').forEach(el=>el.onclick=()=>{state.detail=el.dataset.qmonth;render()});let smooth=$('#smooth');if(smooth)smooth.onchange=e=>{state.smoothHeart=e.target.checked;render()};let cmp=$('#cmpLast');if(cmp)cmp.onchange=e=>{state.compareIncludeLast=e.target.checked;render()};let t=$('#toggleSleep');if(t)t.onclick=()=>{if(!state.sleep)return;state.sleepMode=state.sleepMode==='calendar'?'window':'calendar';render()};let lv=$('#localValue');if(lv){let r=metricRows(state.metric).find(x=>x.month===$('#recMonth').value);lv.textContent=r?`Локальное значение: ${r.value===null?'нет данных':fmt(n(r.value),2)+' '+(known[state.metric]?.[1]||'')}. Определение: ${r.aggregation==='sum'?'сумма за месяц':'среднее по наблюдаемым дням'}.`:'Локального значения нет.';$('#recMonth').onchange=render;$('#saveRec').onclick=()=>{state.reconcile.push({month:$('#recMonth').value,metric:state.metric,local:r?.value??null,app:$('#recValue').value,comment:$('#recComment').value});render()};$('#clearRec').onclick=()=>{state.reconcile=[];render()};$('#downloadRec').onclick=()=>download({schema:'local-reconciliation-v1',items:state.reconcile},'sverka.json');$('#importRec').onclick=()=>$('#recFile').click();$('#recFile').onchange=e=>readFile(e.target, o=>{if(o?.schema!=='local-reconciliation-v1'||!Array.isArray(o.items))throw new InputError('Неверная схема файла сверки.');let keep=o.items.filter(x=>x&&safeDate(x.month)&&safeMetric(x.metric));state.reconcile=keep.map(x=>({month:x.month,metric:x.metric,local:typeof x.local==='number'&&Number.isFinite(x.local)?x.local:null,app:String(x.app??'').slice(0,100),comment:String(x.comment??'').slice(0,500)}));render();show(`Файл сверки импортирован локально: принято записей ${keep.length}${o.items.length>keep.length?`, пропущено некорректных ${o.items.length-keep.length}`:''}.`)})}}
 function download(o,name){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(o,null,2)],{type:'application/json'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}function readFile(input,done){let f=input.files?.[0];if(!f)return;let r=new FileReader;r.onload=()=>{let o;try{o=JSON.parse(r.result)}catch{show('Файл не является корректным JSON.',true);return}
  // Only our own validation messages are shown: a parser message can quote file contents.
  try{done(o)}catch(e){show(e instanceof InputError?e.message:'Не удалось обработать файл.',true)}};r.onerror=()=>show('Не удалось прочитать файл.',true);r.readAsText(f);input.value=''}
-document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.setAttribute('aria-selected',x===b));render()});['from','to','scale','coverage','preset'].forEach(id=>$('#'+id).onchange=e=>{if(id==='preset'){let ms=months(),v=e.target.value,last=ms.at(-1);if(v==='all'){$('#from').value=ms[0];$('#to').value=last}if(v==='year'){$('#from').value=last.slice(0,4)+'-01';$('#to').value=last}if(v==='12'){$('#from').value=ms.at(-12)||ms[0];$('#to').value=last}}render()});$('#reset').onclick=()=>{$('#from').value='';$('#to').value='';$('#scale').value='month';$('#coverage').value='0';$('#preset').value='all';state={main:EMBEDDED_MAIN,sleep:EMBEDDED_SLEEP,sleepMode:'window',isDemo:/*__IS_DEMO__*/,imported:false,fromArchive:false,tab:state.tab,metric:'steps',detail:null,notes:[],reconcile:[],birthYear:state.birthYear,birthText:state.birthText,sex:state.sex};if(hasData())initControls();render()};$('#mainFile').onchange=e=>readFile(e.target,o=>{let note=validateMain(o);state.main=o;state.sleep=null;state.sleepMode='calendar';state.reconcile=[];state.isDemo=false;state.imported=true;state.fromArchive=false;state.metric=activeMetrics()[0]||'steps';state.detail=null;initControls();render();show(('Основной набор импортирован локально. Сон и сверка очищены, чтобы не смешивать наборы. '+note).trim())});$('#sleepFile').onchange=e=>readFile(e.target,o=>{validateSleep(o);state.sleep=o;state.sleepMode='window';render();show('Файл окон сна импортирован локально.')});
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;document.querySelectorAll('[data-tab]').forEach(x=>x.setAttribute('aria-selected',x===b));render()});['from','to','scale','coverage','preset'].forEach(id=>$('#'+id).onchange=e=>{if(id==='preset'){let ms=months(),v=e.target.value,last=ms.at(-1);if(v==='all'){$('#from').value=ms[0];$('#to').value=last}if(v==='year'){$('#from').value=last.slice(0,4)+'-01';$('#to').value=last}if(v==='12'){$('#from').value=ms.at(-12)||ms[0];$('#to').value=last}}render()});$('#reset').onclick=()=>{$('#from').value='';$('#to').value='';$('#scale').value='month';$('#coverage').value='0';$('#preset').value='all';state={main:null,sleep:null,sleepMode:'window',isDemo:false,imported:false,fromArchive:false,tab:'story',metric:'steps',detail:null,notes:[],reconcile:[],birthYear:state.birthYear,birthText:state.birthText,sex:state.sex};document.querySelectorAll('[data-tab]').forEach(x=>x.setAttribute('aria-selected',x.dataset.tab==='story'));render()};$('#mainFile').onchange=e=>readFile(e.target,o=>{let note=validateMain(o);state.main=o;state.sleep=null;state.sleepMode='calendar';state.reconcile=[];state.isDemo=false;state.imported=true;state.fromArchive=false;state.metric=activeMetrics()[0]||'steps';state.detail=null;initControls();render();show(('Основной набор импортирован локально. Сон и сверка очищены, чтобы не смешивать наборы. '+note).trim())});$('#sleepFile').onchange=e=>readFile(e.target,o=>{validateSleep(o);state.sleep=o;state.sleepMode='window';render();show('Файл окон сна импортирован локально.')});
 /*__STORY__*/
 /*__ARCHIVE__*/
 // Чтение своей выгрузки прямо в странице. Файл никуда не уходит: сеть запрещена CSP,
@@ -113,15 +114,33 @@ function bindStart(){let b=HealthUI.control('startBirth'),s=HealthUI.control('st
 let loadYears=[];
 function buildYears(){let now=new Date().getFullYear(),from=state.birthYear||now-40;loadYears=[];for(let y=from;y<=now;y++)loadYears.push(y);let box=HealthUI.control('loadYears');box.replaceChildren(...loadYears.map(y=>{let e=document.createElement('span');e.textContent=y;e.dataset.year=y;return e}));HealthUI.control('loadNote').textContent=state.birthYear?'Листаю годы от '+from+' к '+now+'.':'Год рождения не указан: лента идёт за сорок лет.'}
 function stepYears(fraction){if(!loadYears.length)return;let idx=Math.min(loadYears.length-1,Math.floor(fraction*loadYears.length)),cur=loadYears[idx];HealthUI.control('loadYear').textContent=cur;HealthUI.control('loadStage').textContent=fraction<=0?'Открываю архив':fraction<.97?'Читаю записи':'Свожу дни и месяцы';HealthUI.control('loadYears').querySelectorAll('span').forEach((e,i)=>e.dataset.state=i<idx?'past':i===idx?'now':'')}
-function archiveBusy(on){$('#openArchive').disabled=on;$('#archiveProgress').classList.toggle('hidden',!on);$('#archiveHint').classList.toggle('hidden',on)}
+function archiveBusy(on){$('#archiveProgress').classList.toggle('hidden',!on);$('#resetHint').classList.toggle('hidden',on)}
 // Процент по прочитанным сжатым байтам. Перерисовка только при смене целого процента.
 function archiveStep(fraction){let percent=Math.round(fraction*100);if(percent===archiveShown)return;archiveShown=percent;$('#archivePercent').textContent=percent<97?'Читаю архив':'Свожу дни и месяцы';stepYears(fraction)}
+// Экран чтения живёт не меньше трёх секунд. Маленький архив читается за доли секунды,
+// и без этого лента лет мелькала бы: человек не успевал понять, что вообще произошло.
+// Дочитали раньше — лента всё равно долистывает до конца, и только потом открывается дашборд.
+const READ_MIN_MS=3000;
+function finishYears(startedAt,signal){
+ return new Promise(resolve=>{
+  let from=archiveShown<0?0:archiveShown/100,
+      left=Math.max(0,READ_MIN_MS-(Date.now()-startedAt));
+  if(left<=0&&from>=1){archiveStep(1);resolve();return}
+  let t0=Date.now(),span=Math.max(left,240),
+      tick=()=>{
+       // Отмена во время долистывания просто обрывает ленту: архив уже прочитан.
+       if(signal&&signal.aborted){resolve();return}
+       let k=Math.min(1,(Date.now()-t0)/span);
+       archiveStep(from+(1-from)*k);
+       if(k<1)requestAnimationFrame(tick);else resolve()};
+  requestAnimationFrame(tick)})}
 async function openArchive(file){
- let control=new AbortController();archiveJob=control;archiveShown=-1;archiveBusy(true);buildYears();renderShell();archiveStep(0);dropToasts(true);
+ let control=new AbortController(),startedAt=Date.now();archiveJob=control;archiveShown=-1;archiveBusy(true);buildYears();renderShell();archiveStep(0);dropToasts(true);
  try{
   let out=await HealthArchive.read(file,{onProgress:archiveStep,signal:control.signal});
   // Собственный разбор проходит ту же проверку, что и чужой файл: одна дверь, один контроль.
   validateMain(out.main);validateSleep(out.sleep);
+  await finishYears(startedAt,control.signal);
   Object.assign(state,{main:out.main,sleep:out.sleep,sleepMode:'window',reconcile:[],detail:null});
   // Синтетический архив из команды demo помечается, чтобы никто не принял его за свои данные.
   state.isDemo=/^fake_archive\.zip$/i.test(file.name||'');state.imported=false;state.fromArchive=true;state.tab='story';
@@ -136,7 +155,6 @@ async function openArchive(file){
   else show('Не удалось прочитать архив.',true);
  }finally{archiveJob=null;archiveBusy(false);renderShell()}
 }
-$('#openArchive').onclick=()=>$('#archiveFile').click();
 $('#archiveCancel').onclick=()=>{if(archiveJob)archiveJob.abort()};
 $('#archiveFile').onchange=e=>{let f=e.target.files&&e.target.files[0];e.target.value='';if(f)openArchive(f)};
 

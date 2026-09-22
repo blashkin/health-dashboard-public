@@ -92,6 +92,10 @@ let browser = null;
   page.on('pageerror', e => errors.push(e.message));
   await page.goto('file://' + DASHBOARD);
 
+  // «Сбросить» уводит на стартовый экран и встроенные данные назад не приносит, поэтому
+  // между проверками набор восстанавливается перезагрузкой страницы, а не этой кнопкой.
+  const reload = async () => { await page.reload(); await page.waitForFunction(() => !!window.HealthUI && !!HealthUI.state().main); };
+
   check('the seam is present', await page.evaluate(() => typeof window.HealthUI === 'object' && HealthUI.version === 1));
 
   // The plain-language section is what a first-time reader lands on; the period panel is
@@ -259,7 +263,7 @@ let browser = null;
   check('rising resting heart rate is not coloured as good', story.hrDir === 'up' && story.hrTone === 'watch');
   check('a full year is divided by 52.18 weeks', Math.abs(story.weekFull - 100) < 0.01);
   check('a cut year is divided by the weeks it recorded', Math.abs(story.weekCut - 1820 / (182 / 7)) < 1e-9);
-  await page.click('[data-ui="reset"]');
+  await reload();
 
   // Norms and their paperwork. A threshold or a piece of advice without a source is the one
   // thing this section must never ship: the reader cannot check it, so the page has to.
@@ -365,7 +369,7 @@ let browser = null;
     cover.chips.find(c => c.metric === 'resting_hr').tone === 'watch');
   check('the steps chip is coloured as good',
     cover.chips.find(c => c.metric === 'steps').tone === 'good');
-  await page.click('[data-ui="reset"]');
+  await reload();
 
   // Typed reconciliation text must stay text.
   await page.click('[data-tab="reconcile"]');
@@ -376,7 +380,7 @@ let browser = null;
   check('typed comment is shown as text', (await page.textContent('[data-ui="app"]')).includes(PAYLOAD));
 
   // Imported file contents must stay text on every tab.
-  await page.click('[data-ui="reset"]');
+  await reload();
   await page.setInputFiles('[data-ui="mainFile"]', tempJson('approved_monthly.json', hostileMain()));
   await page.waitForTimeout(50);
   for (const tab of ['story', 'overview', 'activity', 'workouts', 'heart', 'sleep', 'season', 'quality', 'reconcile']) {
@@ -407,7 +411,7 @@ let browser = null;
   check('imported sleep survives switching back and forth', await page.evaluate(() => Array.isArray(HealthUI.state().sleep?.monthly) && HealthUI.state().sleepMode === 'window'));
 
   // An empty but valid file must not break the page: with nothing to show it falls back to the invitation.
-  await page.click('[data-ui="reset"]');
+  await reload();
   await page.setInputFiles('[data-ui="mainFile"]', tempJson('empty.json', { sources: {}, monthly: [] }));
   await page.waitForTimeout(50);
   check('empty data set renders without errors', errors.length === 0);
@@ -415,7 +419,7 @@ let browser = null;
     await page.evaluate(() => !HealthUI.control('start').className.includes('hidden') && getComputedStyle(HealthUI.control('nav')).display === 'none'));
 
   // Heart smoothing keeps its state across re-renders.
-  await page.click('[data-ui="reset"]');
+  await reload();
   await page.click('[data-tab="heart"]');
   await page.click('[data-ui="smooth"]');
   await page.waitForTimeout(50);
@@ -444,7 +448,7 @@ let browser = null;
   check('February pairs across a leap year are kept', compare.withLast.includes('2024-02'));
   check('coverage filter applies to comparison', !compare.filtered.includes('2024-03'));
 
-  await page.click('[data-ui="reset"]');
+  await reload();
 
   // The norms section as it is actually rendered. A claim without its paperwork, a footnote
   // leading nowhere, or a marker sliding off its own ruler are all silent failures.
@@ -593,7 +597,7 @@ let browser = null;
   // The thinnest archive the checklist names: one year, steps only, no vo2max, no sleep.
   // Blocks with nothing to say must say so, not throw and not invent a trend from one point.
   await page.click('[data-tab="overview"]');
-  await page.click('[data-ui="reset"]');
+  await reload();
   await page.setInputFiles('[data-ui="mainFile"]', tempJson('thin.json', {
     sources: {}, monthly: Array.from({ length: 12 }, (_, i) => {
       const days = new Date(2023, i + 1, 0).getDate();
@@ -619,10 +623,10 @@ let browser = null;
   check('one year is not enough for a trend, and the page says that', thin.verdicts.every(v => /данных мало/.test(v)));
   check('the thin page still carries its sources', thin.refs > 0);
   await page.click('[data-tab="overview"]');
-  await page.click('[data-ui="reset"]');
+  await reload();
 
   // Своя выгрузка читается прямо в странице: zip -> дашборд, без терминала и без сети.
-  await page.click('[data-ui="reset"]');
+  await reload();
   // Старые сообщения снимаются перед каждой подачей: иначе ожидание примет чужое за ответ.
   const settled = () => page.waitForFunction(() => HealthUI.control('alert').textContent.length > 0, null, { timeout: 60000 });
   const feed = async file => { await page.evaluate(() => HealthUI.dropToasts(true)); await page.setInputFiles('[data-ui="archiveFile"]', file); await settled(); };
@@ -636,7 +640,7 @@ let browser = null;
     period: HealthUI.control('periodTitle').textContent,
     steps: HealthUI.state().main.monthly.filter(r => r.metric === 'steps').length,
     windows: HealthUI.state().sleep.monthly.length,
-    hint: !HealthUI.control('archiveHint').className.includes('hidden'),
+    hint: !HealthUI.control('resetHint').className.includes('hidden'),
     progress: HealthUI.control('archiveProgress').className.includes('hidden'),
   }));
   check('an archive opened in the page replaces the previous set', opened.isDemo === false && opened.fromArchive === true);
@@ -686,7 +690,32 @@ let browser = null;
   await settled();
   const cancelled = await page.evaluate(() => ({ text: HealthUI.control('alert').textContent, rows: HealthUI.state().main.monthly.length }));
   check('cancelling leaves the previous data in place', /отменено/i.test(cancelled.text) && cancelled.rows === marker);
+  await reload();
+
+  // Кнопка в шапке одна и значит одно и то же на любой странице: уйти на стартовый экран.
+  // Встроенный в build набор после этого не возвращается — только новым файлом.
+  await page.click('[data-tab="overview"]');
   await page.click('[data-ui="reset"]');
+  const afterReset = await page.evaluate(() => ({
+    main: HealthUI.state().main, tab: HealthUI.state().tab,
+    start: !HealthUI.control('start').className.includes('hidden'),
+    nav: getComputedStyle(HealthUI.control('nav')).display === 'none',
+    button: HealthUI.control('reset').className.includes('hidden'),
+    hint: HealthUI.control('resetHint').textContent,
+  }));
+  check('«Сбросить» on a page with data returns to the start screen',
+    afterReset.main === null && afterReset.start && afterReset.nav && afterReset.tab === 'story');
+  check('the embedded set does not come back on its own', afterReset.main === null);
+  check('with nothing to reset the button goes away', afterReset.button);
+  check('the caption under the button says where it leads',
+    /вернётесь на стартовый экран/.test(afterReset.hint));
+  await reload();
+  check('on a page with data the header shows «Сбросить» in the error colour',
+    await page.evaluate(() => {
+      const b = HealthUI.control('reset');
+      return !b.className.includes('hidden') && b.textContent.trim() === 'Сбросить'
+        && getComputedStyle(b).backgroundColor === 'rgb(200, 68, 45)';
+    }));
 
   check('no network requests other than file:', [...schemes].every(s => s === 'file'));
   check('no page errors', errors.length === 0);
@@ -703,11 +732,19 @@ let browser = null;
     main: HealthUI.state().main, start: !HealthUI.control('start').className.includes('hidden'),
     footer: /github\.com\/blashkin\/health-dashboard-public/.test(HealthUI.control('foot').textContent),
     fields: !!HealthUI.control('startBirth') && !!HealthUI.control('startSex') && !!HealthUI.control('startOpen'),
+    noHeaderButton: !document.querySelector('[data-ui="openArchive"]')
+      && HealthUI.control('reset').className.includes('hidden')
+      && HealthUI.control('resetHint').className.includes('hidden'),
   }));
   check('the empty page carries no data at all', startState.main === null);
   check('the empty page opens with the invitation', startState.start && !(await visible('nav')) && !(await visible('app')) && !(await visible('controls')));
-  check('the header keeps no archive button while the start screen is up', !(await visible('openArchive')));
+  check('the start screen leaves no button in the header', startState.noHeaderButton);
   check('the start screen offers year of birth, sex and the button', startState.fields);
+  check('both start fields are the same height, border and corner', await empty.evaluate(() => {
+    const box = el => { const c = getComputedStyle(el), r = el.getBoundingClientRect();
+      return [Math.round(r.height), c.borderRadius, c.borderTopWidth, c.borderTopColor].join('|'); };
+    return box(HealthUI.control('startBirth')) === box(HealthUI.control('startSex'));
+  }));
   check('the footer names the repository', startState.footer);
   await empty.fill('[data-ui="startBirth"]', '1988');
   await empty.selectOption('[data-ui="startSex"]', 'm');
@@ -738,7 +775,12 @@ let browser = null;
   check('cancelling on the empty page returns to the start with nothing loaded',
     await empty.evaluate(() => /Ничего не загружено/.test(HealthUI.control('alert').textContent) && HealthUI.state().main === null && !HealthUI.control('start').className.includes('hidden')));
 
+  // Маленький архив читается за доли секунды: экран чтения обязан всё равно прожить
+  // три секунды, иначе лента лет мелькает и человек не понимает, что произошло.
+  const beforeFeed = Date.now();
   await feedEmpty(archiveOf(healthXml()));
+  const readMs = Date.now() - beforeFeed;
+  check('a small archive still keeps the reading screen for about three seconds', readMs >= 2900);
   const ready = await empty.evaluate(() => ({
     tab: HealthUI.state().tab, start: HealthUI.control('start').className.includes('hidden'), loading: HealthUI.control('loading').className.includes('hidden'),
     who: (HealthUI.control('app').querySelector('[data-role="story-who"]') || {}).textContent || '',

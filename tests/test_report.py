@@ -36,9 +36,11 @@ class ReportTests(unittest.TestCase):
   html=page()
   for rule in ("default-src 'none'","connect-src 'none'","base-uri 'none'","form-action 'none'"):
    self.assertIn(rule,html)
- def test_demo_flag_reaches_both_state_initialisers(self):
-  self.assertEqual(page(is_demo=True).count('isDemo:true'),2)
-  self.assertEqual(page(is_demo=False).count('isDemo:false'),2)
+ def test_demo_flag_reaches_the_state_initialiser(self):
+  # Инициализатор теперь один: «Сбросить» уводит на стартовый экран, а не к встроенному набору.
+  self.assertEqual(report.skeleton().count('isDemo:/*__IS_DEMO__*/'),1)
+  self.assertEqual(page(is_demo=True).count('isDemo:true'),1)
+  self.assertNotIn('isDemo:true',page(is_demo=False))
  def test_a_missing_placeholder_is_an_error_not_a_silent_pass(self):
   with self.assertRaises(ValueError): report.sub('нет плейсхолдера','/*__X__*/','y')
  def test_the_seam_for_interface_checks_survives_the_build(self):
@@ -46,7 +48,7 @@ class ReportTests(unittest.TestCase):
   html=page()
   self.assertIn('window.HealthUI=HealthUI',html)
   for name in ('from','to','coverage','reset','mainFile','sleepFile','smooth','toggleSleep','recComment','saveRec','app','controls',
-               'openArchive','archiveFile','archiveProgress','archiveCancel','archiveHint','periodTitle','alert'):
+               'archiveFile','archiveProgress','archiveCancel','resetHint','periodTitle','alert'):
    self.assertIn('data-ui="%s"'%name,html,name)
   # Уведомления рождаются во время работы, поэтому проверяется их движок, а не разметка.
   for name in ('function notify','dropToasts',"dataset.role='toast'"):
