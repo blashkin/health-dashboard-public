@@ -1,7 +1,7 @@
 # health-dashboard
 
 Turn an Apple Health export into a dashboard of your own long-term trends — activity,
-workouts, heart and sleep — entirely on your own machine. The first screen, «Main»,
+workouts, heart and sleep — entirely on your own machine. The first screen, "Main",
 sets your numbers against published guidelines (WHO and others, each with its source);
 the other tabs show the series themselves and how complete the records are.
 
@@ -19,7 +19,7 @@ python3 -m health_dashboard demo --open
 
 This writes `out/demo/dashboard.html` — the page — and `fake_archive.zip` beside it,
 a synthetic Apple Health export. The page opens with an invitation: year of birth and
-sex (only for the WHO reference ranges), then **«Open the archive»**. Pick the fake
+sex (only for the WHO reference ranges), then **"Open the archive"**. Pick the fake
 archive to see what you would get, or your own `export.zip` to see your data. While the
 archive is read, the page leafs through the years from your birth year to today; then
 the screens appear.
@@ -64,7 +64,7 @@ for what that does and does not protect you from.
 
 ## What it does not do
 
-- It is **not a medical device** and it does not diagnose anything. «Main» compares
+- It is **not a medical device** and it does not diagnose anything. "Main" compares
   your numbers with general population guidelines and quotes their general advice,
   including when a doctor is worth asking; none of it is advice about you.
 - It does not explain causes, test significance or predict anything.

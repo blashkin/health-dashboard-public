@@ -2,7 +2,7 @@
 
 The engine writes two JSON files that the interface understands. `build` embeds them
 into `dashboard.html` directly. The page can also produce both objects itself, in the
-browser, from an `export.zip` opened with «Open the archive» — same shape, same
+browser, from an `export.zip` opened with "Open the archive" — same shape, same
 validation, no file on disk. `demo/` holds synthetic files of exactly this shape.
 
 Two objects rather than one because sleep is counted under two definitions with
