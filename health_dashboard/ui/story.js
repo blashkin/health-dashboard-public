@@ -337,7 +337,12 @@ function coverChips(){
   else {let d=first?base.value-first.value:null;
    num=d===null?t('chip.inYear',{value:fmt(base.value,0),unit:unit,year:base.year})
     :t('chip.since',{sign:d>0?'+':'−',value:fmt(Math.abs(d),0),unit:unit,year:first.year});}
-  return {metric,title,line:t(CHIP_LINE[metric][dir]),num,tone:toneOf(metric,dir)}})}
+  // У шагов сравнение идёт с первым полным годом — так и сказано. Но направление не
+  // всегда оттуда: без первого года оно берётся у тренда по всем полным годам, и тогда
+  // ссылаться на первый год было бы неправдой.
+  let key=CHIP_LINE[metric][dir],
+      line=metric==='steps'&&!first?t(key+'.noFirst'):t(key);
+  return {metric,title,line,num,tone:toneOf(metric,dir)}})}
 
 const STORY_UNIT={steps:'sunit.steps',exercise_min:'sunit.exercise_min',resting_hr:'unit.bpm',vo2max:'unit.vo2',sleep_hours:'sunit.sleep_hours'};
 // Единица зависит от числа перед ней: «1 шаг», «3 шага», «983 шага». Там, где падежа нет
