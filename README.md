@@ -11,6 +11,16 @@ never written to disk. Most of the documentation is in Russian; this README, the
 contract and the development notes are in English. **Русская версия этого файла —
 [README.ru.md](README.ru.md).**
 
+![Three chips: fitness, everyday life, the heart — each one a phrase first and the figure second](docs/shots/1-cover-en.png)
+
+![The steps norm: a ruler with zones, the verdict in words, and a source number beside every line](docs/shots/2-norm-en.png)
+
+![The wall of years: one cell per year, ochre where the records are thin, an empty cell where the device wrote nothing](docs/shots/3-wall-en.png)
+
+![Which activities take up the most room: two pies, by time and by number of sessions](docs/shots/4-sport-en.png)
+
+*Screens from the synthetic archive that `demo` writes — nobody's real data. The first two in the light theme, the last two in the dark one.*
+
 ## One way in
 
 ```sh

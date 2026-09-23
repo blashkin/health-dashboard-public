@@ -24,6 +24,7 @@ demo/                    the generated fixtures, committed
 docs/                    this directory
 tests/                   unittest, plus tests/legacy/ and tests/ui/
   ui/browser.cjs         the browser checks
+  ui/shots.cjs           the README screenshots, taken from the same built page
   ui/archive_run.cjs     runs ui/archive.js outside a browser, for the equivalence check
   ui/make_archive_fixtures.py  one archive, and what Python computes from it
   ui/make_zip.cjs        a minimal stored-entry zip builder for the browser checks
@@ -103,6 +104,20 @@ Chrome is taken through `channel: 'chrome'`; a different binary can be given wit
 `HEALTH_DASHBOARD_HTML` and defaults to `out/check/dashboard.html`; the empty page is
 the second argument or `HEALTH_DASHBOARD_EMPTY`, default `out/demo/dashboard.html`, with
 `fake_archive.zip` expected beside it.
+
+## The screenshots in the READMEs
+
+`docs/shots/` holds eight PNGs — four screens in two languages, the first two in the light
+theme and the last two in the dark one. They are taken from the same built page as the
+checks, so they show the synthetic archive and never anyone's data:
+
+```sh
+node tests/ui/shots.cjs
+```
+
+Playwright, Chrome and the page path are resolved exactly as for `browser.cjs`. Retake
+them whenever the interface changes and before committing that change — a screenshot that
+disagrees with the page is worse than no screenshot.
 
 ## What the test modules are for
 
