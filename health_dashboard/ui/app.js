@@ -346,6 +346,7 @@ const HealthUI={
  sportYears,setTheme,currentTheme,sleepStages,
  setLang,currentLang,t,tPlural,translateStatic,
  dict:()=>I18N.ru,
+ dicts:()=>I18N,
  setState:patch=>Object.assign(state,patch),
  control:name=>document.querySelector('[data-ui="'+name+'"]'),
  fragment:markup=>{let t=document.createElement('template');t.innerHTML=markup;return t.content},

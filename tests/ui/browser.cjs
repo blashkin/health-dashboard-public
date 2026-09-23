@@ -1080,6 +1080,30 @@ let browser = null;
   check('no interface key is missing in Russian', missing.length === 0);
   if (missing.length) console.log(missing);
 
+  // Полнота словаря. Равенство множеств ключей включится вместе с нормами (этап D2);
+  // сейчас проверяется то, что уже обязано выполняться.
+  const dict = await page.evaluate(() => {
+    const both = HealthUI.dicts(), ru = both.ru, en = both.en;
+    const marks = v => [...String([].concat(v).join(' ')).matchAll(/\{(\w+)\}/g)].map(m => m[1]).sort().join(',');
+    return {
+      orphanEn: Object.keys(en).filter(k => !(k in ru)),
+      cyrillicEn: Object.keys(en).filter(k => /[А-Яа-яЁё]/.test([].concat(en[k]).join(' '))),
+      emptyRu: Object.keys(ru).filter(k => [].concat(ru[k]).some(x => !String(x).trim())),
+      badMarks: Object.keys(en).filter(k => k in ru && marks(ru[k]) !== marks(en[k])),
+      badShape: Object.keys(en).filter(k => k in ru && Array.isArray(ru[k]) !== Array.isArray(en[k])),
+      ruForms: [].concat(ru['plural.day']).length, enForms: [].concat(en['plural.day']).length,
+      untranslated: Object.keys(ru).filter(k => !(k in en)).length };
+  });
+  check('every English key answers a Russian one', dict.orphanEn.length === 0);
+  check('no English value carries Cyrillic', dict.cyrillicEn.length === 0);
+  check('no Russian value is empty', dict.emptyRu.length === 0);
+  check('the substitutions of a key are the same in both languages', dict.badMarks.length === 0);
+  check('a key that is a set of plural forms stays one in both languages', dict.badShape.length === 0);
+  check('Russian has three plural forms and English two', dict.ruForms === 3 && dict.enForms === 2);
+  if (dict.orphanEn.length || dict.cyrillicEn.length || dict.badMarks.length || dict.badShape.length)
+    console.log(dict.orphanEn, dict.cyrillicEn, dict.badMarks, dict.badShape);
+  console.log('      (' + dict.untranslated + ' keys are still Russian only — the norms, stage D2)');
+
   check('no network requests other than file:', [...schemes].every(s => s === 'file'));
   check('no page errors', errors.length === 0);
   if (errors.length) console.log(errors);
