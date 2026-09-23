@@ -1080,6 +1080,19 @@ let browser = null;
   check('no interface key is missing in Russian', missing.length === 0);
   if (missing.length) console.log(missing);
 
+  // То же по-английски: обход всех вкладок не должен оставить ни одного промаха ключа.
+  const missingEn = await page.evaluate(() => {
+    HealthUI.setLang('en');
+    HealthUI.setState({ missing: [] });
+    for (const b of document.querySelectorAll('[data-tab]')) { HealthUI.setState({ tab: b.dataset.tab }); HealthUI.render(); }
+    const left = (HealthUI.state().missing || []).slice();
+    HealthUI.setLang('ru');
+    HealthUI.setState({ tab: 'story' }); HealthUI.render();
+    return left;
+  });
+  check('no interface key is missing in English', missingEn.length === 0);
+  if (missingEn.length) console.log(missingEn);
+
   // Полнота словаря. Равенство множеств ключей включится вместе с нормами (этап D2);
   // сейчас проверяется то, что уже обязано выполняться.
   const dict = await page.evaluate(() => {
@@ -1094,6 +1107,7 @@ let browser = null;
       ruForms: [].concat(ru['plural.day']).length, enForms: [].concat(en['plural.day']).length,
       untranslated: Object.keys(ru).filter(k => !(k in en)).length };
   });
+  check('the two dictionaries hold the same keys', dict.untranslated === 0);
   check('every English key answers a Russian one', dict.orphanEn.length === 0);
   check('no English value carries Cyrillic', dict.cyrillicEn.length === 0);
   check('no Russian value is empty', dict.emptyRu.length === 0);
@@ -1102,7 +1116,6 @@ let browser = null;
   check('Russian has three plural forms and English two', dict.ruForms === 3 && dict.enForms === 2);
   if (dict.orphanEn.length || dict.cyrillicEn.length || dict.badMarks.length || dict.badShape.length)
     console.log(dict.orphanEn, dict.cyrillicEn, dict.badMarks, dict.badShape);
-  console.log('      (' + dict.untranslated + ' keys are still Russian only — the norms, stage D2)');
 
   check('no network requests other than file:', [...schemes].every(s => s === 'file'));
   check('no page errors', errors.length === 0);
