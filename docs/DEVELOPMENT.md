@@ -18,7 +18,7 @@ health_dashboard/        the package; runs from the repository directory, no ins
   ui/index.html          markup and placeholders
   ui/styles.css          the stylesheet
   ui/app.js              the interface itself
-  ui/story.js            the "Главное" section, spliced into app.js at /*__STORY__*/
+  ui/story.js            the "Main" section, spliced into app.js at /*__STORY__*/
   ui/archive.js          zip -> records -> the same two objects, in the browser
 demo/                    the generated fixtures, committed
 docs/                    this directory
