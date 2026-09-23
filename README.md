@@ -5,8 +5,10 @@ workouts, heart and sleep — entirely on your own machine. The first screen, «
 sets your numbers against published guidelines (WHO and others, each with its source);
 the other tabs show the series themselves and how complete the records are.
 
-The interface is in Russian, and so is most of the documentation; this README, the
-data contract and the development notes are in English. **Русская версия этого файла —
+The page speaks Russian and English. It picks one from the browser locale and the
+RU/EN button in the header changes it for the session; like the theme, the choice is
+never written to disk. Most of the documentation is in Russian; this README, the data
+contract and the development notes are in English. **Русская версия этого файла —
 [README.ru.md](README.ru.md).**
 
 ## One way in

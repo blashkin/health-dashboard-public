@@ -1108,6 +1108,36 @@ let browser = null;
       untranslated: Object.keys(ru).filter(k => !(k in en)).length };
   });
   check('the two dictionaries hold the same keys', dict.untranslated === 0);
+
+  // Русский литерал в разметке валит набор: видимый текст живёт только в i18n.js.
+  // Кириллица в app.js и story.js разрешена лишь в комментариях. Комментарий ищется
+  // грубо, но однозначно: блочный по /* … */, строчный по первому // без двоеточия
+  // перед ним (иначе за комментарий принимался бы https:// внутри ссылки).
+  const literals = [];
+  for (const name of ['app.js', 'story.js']) {
+    const lines = fs.readFileSync(path.join(REPO, 'health_dashboard', 'ui', name), 'utf8').split('\n');
+    let inBlock = false;
+    lines.forEach((line, i) => {
+      let body = line;
+      if (inBlock) {
+        const end = body.indexOf('*/');
+        if (end < 0) return;
+        body = body.slice(end + 2);
+        inBlock = false;
+      }
+      const open = body.indexOf('/*');
+      if (open >= 0) { inBlock = body.indexOf('*/', open) < 0; body = body.slice(0, open) + (inBlock ? '' : body.slice(body.indexOf('*/', open) + 2)); }
+      let cut = -1;
+      for (let p = body.indexOf('//'); p >= 0; p = body.indexOf('//', p + 2)) {
+        if (p > 0 && body[p - 1] === ':') continue;
+        cut = p; break;
+      }
+      if (cut >= 0) body = body.slice(0, cut);
+      if (/[А-Яа-яЁё]/.test(body)) literals.push(name + ':' + (i + 1));
+    });
+  }
+  check('no Russian literal is left in the markup of app.js and story.js', literals.length === 0);
+  if (literals.length) console.log(literals);
   check('every English key answers a Russian one', dict.orphanEn.length === 0);
   check('no English value carries Cyrillic', dict.cyrillicEn.length === 0);
   check('no Russian value is empty', dict.emptyRu.length === 0);
