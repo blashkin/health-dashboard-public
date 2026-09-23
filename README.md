@@ -19,7 +19,7 @@ contract and the development notes are in English. **Русская версия
 
 ![Which activities take up the most room: two pies, by time and by number of sessions](docs/shots/4-sport-en.png)
 
-*Screens from the synthetic archive that `demo` writes — nobody's real data. The first two in the light theme, the last two in the dark one.*
+*The screenshots are taken from synthetic data.*
 
 ## One way in
 
